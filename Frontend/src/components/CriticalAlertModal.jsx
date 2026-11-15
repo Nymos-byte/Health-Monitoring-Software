@@ -1,20 +1,34 @@
+import { useEffect } from 'react';
 import { Siren } from 'lucide-react';
 import { metricDefinitions, getMetricRange } from '../data/mockData';
 import { crewLabels, formatMetricValue, getCrewAdvice } from '../utils/metrics';
 
 // Blocking emergency dialog: it can only be dismissed with the acknowledge button
 export default function CriticalAlertModal({ readings, audience, onAcknowledge }) {
-  if (!readings.length) return null;
+  const open = readings.length > 0;
+
+  // The page behind must not scroll while the dialog is open
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [open]);
+
+  if (!open) return null;
 
   return (
     <div
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="critical-title"
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overscroll-contain"
     >
-      <div className="blink-critical w-full max-w-xl rounded-2xl border-2 border-vital-red bg-space-900 p-6 space-y-5">
-        <div className="flex items-center gap-4">
+      {/* Header and button stay put; with many alerts only the list scrolls */}
+      <div className="blink-critical w-full max-w-xl max-h-[calc(100dvh-2rem)] flex flex-col rounded-2xl border-2 border-vital-red bg-space-900 p-6 gap-5">
+        <div className="flex items-center gap-4 shrink-0">
           <Siren size={44} className="text-vital-red shrink-0" />
           <div>
             <h2 id="critical-title" className="text-2xl font-bold text-vital-red">
@@ -28,7 +42,13 @@ export default function CriticalAlertModal({ readings, audience, onAcknowledge }
           </div>
         </div>
 
-        <ul className="space-y-3">
+        {readings.length > 1 && (
+          <p className="-mt-2 text-sm text-vital-red font-medium shrink-0">
+            {readings.length} critical readings · scroll to see all
+          </p>
+        )}
+
+        <ul className="space-y-3 min-h-0 overflow-y-auto overscroll-contain pr-1">
           {readings.map(({ id, member, section, metricKeys, rule, vitals, context }) => (
             <li key={id} className="p-4 rounded-xl bg-vital-red/10 border border-vital-red/40">
               {audience === 'ground' && (
@@ -61,9 +81,9 @@ export default function CriticalAlertModal({ readings, audience, onAcknowledge }
 
         <button
           onClick={() => onAcknowledge(readings.map((r) => r.id))}
-          className="w-full py-4 rounded-xl text-lg font-bold transition-colors bg-vital-red text-on-accent hover:bg-vital-red/85 cursor-pointer"
+          className="w-full shrink-0 py-4 rounded-xl text-lg font-bold transition-colors bg-vital-red text-on-accent hover:bg-vital-red/85 cursor-pointer"
         >
-          Acknowledge and view vital signs
+          {readings.length > 1 ? `Acknowledge all ${readings.length} and view vital signs` : 'Acknowledge and view vital signs'}
         </button>
       </div>
     </div>
