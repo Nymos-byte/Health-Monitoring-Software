@@ -7,7 +7,7 @@ import {
 import { getEnvironment } from '../data/mockData';
 import TaskSelect from './TaskSelect';
 
-export default function AstronautProfile({ member, onAssignTask }) {
+export default function AstronautProfile({ member, crewData, records, onAssignTask }) {
   if (!member) return null;
 
   const cv = member.data.currentVitals;
@@ -40,7 +40,13 @@ export default function AstronautProfile({ member, onAssignTask }) {
         <p className="text-sm text-gray-400 mt-0.5">{facts.join('  ·  ')}</p>
         <label className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-400">
           Current task
-          <TaskSelect value={member.taskId} onChange={(taskId) => onAssignTask(member.id, taskId)} />
+          <TaskSelect
+            value={member.taskId}
+            onChange={(taskId) => onAssignTask(member.id, taskId)}
+            astronautId={member.id}
+            crewData={crewData}
+            records={records}
+          />
           <span className="text-xs text-gray-500">
             ({env.name} · {member.task.activity} activity)
           </span>

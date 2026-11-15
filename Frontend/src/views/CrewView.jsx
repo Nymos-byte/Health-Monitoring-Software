@@ -25,6 +25,7 @@ const severityRank = { critical: 0, caution: 1, nominal: 2 };
 
 export default function CrewView({
   crewData,
+  records,
   selectedAstronaut,
   onSelectAstronaut,
   onAssignTask,
@@ -149,6 +150,9 @@ export default function CrewView({
         <TaskSelect
           value={member.taskId}
           onChange={(taskId) => onAssignTask(member.id, taskId)}
+          astronautId={member.id}
+          crewData={crewData}
+          records={records}
           className="!text-xs !text-gray-300"
         />
         <button

@@ -3,7 +3,13 @@ import { getStatusColor, getMemberStatus, calculateHealthScore } from '../utils/
 import TaskSelect from './TaskSelect';
 
 // Who is doing what, where. Each astronaut appears in exactly one environment.
-export default function AssignmentsPanel({ crewData, selectedId, onSelectAstronaut, onAssignTask }) {
+export default function AssignmentsPanel({
+  crewData,
+  records,
+  selectedId,
+  onSelectAstronaut,
+  onAssignTask,
+}) {
   const members = Object.values(crewData);
 
   return (
@@ -53,7 +59,13 @@ export default function AssignmentsPanel({ crewData, selectedId, onSelectAstrona
                     </td>
                   ))}
                   <td className="px-4 py-1.5">
-                    <TaskSelect value={m.taskId} onChange={(taskId) => onAssignTask(m.id, taskId)} />
+                    <TaskSelect
+                      value={m.taskId}
+                      onChange={(taskId) => onAssignTask(m.id, taskId)}
+                      astronautId={m.id}
+                      crewData={crewData}
+                      records={records}
+                    />
                   </td>
                 </tr>
               );
@@ -62,8 +74,9 @@ export default function AssignmentsPanel({ crewData, selectedId, onSelectAstrona
         </table>
       </div>
       <p className="text-xs text-gray-500">
-        One task per astronaut. Reassigning moves the astronaut to the task's environment and restarts
-        their monitoring with the limits for that environment and activity level.
+        One task per astronaut at a time; several astronauts can share the same task. Reassigning
+        stores the finished session in Records and restarts monitoring with the limits for the new
+        environment and activity level. One-time tasks can't be repeated once completed.
       </p>
     </div>
   );

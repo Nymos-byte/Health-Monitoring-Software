@@ -123,15 +123,20 @@ export const EVA_METRICS = ['suit_pressure_psia', 'suit_co2_ppm'];
 const EVA_PRIMARY_METRICS = ['suit_pressure_psia', 'suit_co2_ppm', 'spo2_pct', 'heart_rate_bpm'];
 
 // Each astronaut has exactly one task at a time; the task decides the environment
-// and the activity level the vitals are evaluated against.
+// and the activity level the vitals are evaluated against. Several astronauts can do the
+// same task at once. `once` marks tasks an astronaut performs a single time per mission
+// (their record is final); every other task can be repeated and its record is replaced
+// by the newest completed session.
 export const TASKS = [
-  { id: 'pre_medical', environment: 'earth_preflight', name: 'Baseline medical exam', activity: 'Rest' },
+  { id: 'pre_medical', environment: 'earth_preflight', name: 'Baseline medical exam', activity: 'Rest', once: true },
   { id: 'pre_sim', environment: 'earth_preflight', name: 'Simulator training', activity: 'Light' },
   { id: 'pre_fitness', environment: 'earth_preflight', name: 'Fitness conditioning', activity: 'Intense' },
 
+  { id: 'sc_launch', environment: 'spacecraft', name: 'Launch & ascent', activity: 'Rest', flightPhase: 'Launch', once: true },
   { id: 'sc_piloting', environment: 'spacecraft', name: 'Flight operations', activity: 'Light', flightPhase: 'Transit' },
-  { id: 'sc_docking', environment: 'spacecraft', name: 'Docking procedure', activity: 'Moderate', flightPhase: 'Docking' },
+  { id: 'sc_docking', environment: 'spacecraft', name: 'Docking procedure', activity: 'Moderate', flightPhase: 'Docking', once: true },
   { id: 'sc_rest', environment: 'spacecraft', name: 'Scheduled sleep period', activity: 'Rest', flightPhase: 'Transit' },
+  { id: 'sc_reentry', environment: 'spacecraft', name: 'Re-entry & landing', activity: 'Rest', flightPhase: 'Reentry', once: true },
 
   { id: 'iss_science', environment: 'space_station', name: 'Science experiments', activity: 'Light' },
   { id: 'iss_maintenance', environment: 'space_station', name: 'Station maintenance', activity: 'Moderate' },
@@ -608,14 +613,13 @@ function taskBaseline(task) {
   return base;
 }
 
-function generateTimeSeries(task, memberOffset, points = 24) {
+function generateTimeSeries(task, memberOffset, points = 24, endAt = Date.now()) {
   const base = taskBaseline(task);
   const data = [];
-  const now = new Date();
   const stepMs = task.eva ? 15 * 60000 : 3600000;
 
   for (let i = points; i >= 0; i--) {
-    const time = new Date(now - i * stepMs);
+    const time = new Date(endAt - i * stepMs);
     const wave = Math.sin(i * 0.45 + memberOffset);
     const slowWave = Math.cos(i * 0.2 + memberOffset);
     const noise = (m) => (Math.random() - 0.5) * m;
@@ -647,11 +651,11 @@ function generateTimeSeries(task, memberOffset, points = 24) {
   return data;
 }
 
-// Monitoring state for one astronaut doing one task
-export function buildAssignment(member, taskId, memberIndex) {
+// Monitoring state for one astronaut doing one task. `endAt` lets past sessions be generated.
+export function buildAssignment(member, taskId, memberIndex, endAt = Date.now()) {
   const task = getTask(taskId);
   const env = getEnvironment(task.environment);
-  const series = generateTimeSeries(task, memberIndex);
+  const series = generateTimeSeries(task, memberIndex, 24, endAt);
   const currentVitals = {
     ...series[series.length - 1],
     activity_level: task.activity,
@@ -659,12 +663,61 @@ export function buildAssignment(member, taskId, memberIndex) {
     event: 'Normal',
     ...scenarios[`${member.id}:${taskId}`],
   };
-  return { ...member, taskId, task, env: task.environment, data: { vitals: series, currentVitals } };
+  return {
+    ...member,
+    taskId,
+    task,
+    env: task.environment,
+    startedAt: endAt,
+    data: { vitals: series, currentVitals },
+  };
 }
 
 export function generateCrewData() {
   return Object.fromEntries(
     crewMembers.map((member, idx) => [member.id, buildAssignment(member, member.defaultTask, idx)])
+  );
+}
+
+export function recordKey(astronautId, taskId) {
+  return `${astronautId}:${taskId}`;
+}
+
+// Completed session of a task: the astronaut's state when the task ended, kept on the ground
+export function makeSessionRecord(member, endedAt = Date.now()) {
+  return {
+    key: recordKey(member.id, member.taskId),
+    member,
+    startedAt: member.startedAt,
+    endedAt,
+  };
+}
+
+const DAY_MS = 86400000;
+
+// Sessions already completed before the monitoring starts, consistent with where each
+// astronaut is now (e.g. whoever is in transit has done the pre-flight baseline exam)
+const completedSessions = [
+  { astronautId: 'ast-001', taskId: 'pre_medical', daysAgo: 17 },
+  { astronautId: 'ast-001', taskId: 'pre_fitness', daysAgo: 16 },
+  { astronautId: 'ast-001', taskId: 'sc_launch', daysAgo: 2 },
+  { astronautId: 'ast-002', taskId: 'pre_medical', daysAgo: 40 },
+  { astronautId: 'ast-002', taskId: 'base_eva', daysAgo: 3 },
+  { astronautId: 'ast-003', taskId: 'pre_medical', daysAgo: 140 },
+  { astronautId: 'ast-003', taskId: 'iss_exercise', daysAgo: 1 },
+  { astronautId: 'ast-004', taskId: 'iss_science', daysAgo: 8 },
+  { astronautId: 'ast-004', taskId: 'sc_reentry', daysAgo: 5 },
+];
+
+export function generateInitialRecords() {
+  return Object.fromEntries(
+    completedSessions.map(({ astronautId, taskId, daysAgo }) => {
+      const index = crewMembers.findIndex((m) => m.id === astronautId);
+      const endedAt = Date.now() - daysAgo * DAY_MS;
+      const member = buildAssignment(crewMembers[index], taskId, index, endedAt);
+      const startedAt = member.data.vitals[0].timestamp;
+      return [recordKey(astronautId, taskId), { ...makeSessionRecord(member, endedAt), startedAt }];
+    })
   );
 }
 

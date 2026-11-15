@@ -15,7 +15,7 @@ function getViewFromHash() {
 
 function App() {
   const initialData = useMemo(() => generateCrewData(), []);
-  const { crewData, emergencies, toggleEmergency, assignTask } = useRealtimeVitals(initialData);
+  const { crewData, records, emergencies, toggleEmergency, assignTask } = useRealtimeVitals(initialData);
   // Crew sees onboard data; ground sees only what the downlink has delivered
   const { groundData, links, now, forcedLoss, toggleLinkLoss } = useDownlink(crewData);
   const [view, setView] = useState(getViewFromHash);
@@ -80,7 +80,7 @@ function App() {
     if (first) setSelectedAstronaut(first.id);
   };
   const handleAssignTask = (id, taskId) => {
-    assignTask(id, taskId);
+    if (!assignTask(id, taskId)) return;
     setSelectedAstronaut(id);
     setSelectedSection(getTask(taskId).environment);
   };
@@ -97,6 +97,7 @@ function App() {
 
   const shared = {
     crewData,
+    records,
     alerts,
     selectedSection,
     selectedAstronaut,

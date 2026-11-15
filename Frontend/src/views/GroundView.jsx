@@ -1,4 +1,4 @@
-import { Activity, History, ClipboardList, Globe2, Video } from 'lucide-react';
+import { Activity, History, ClipboardList, Globe2, Video, Archive } from 'lucide-react';
 import PhaseTabs from '../components/PhaseTabs';
 import CrewRoster from '../components/CrewRoster';
 import AlertsPanel from '../components/AlertsPanel';
@@ -10,24 +10,28 @@ import EmptyEnvironment from '../components/EmptyEnvironment';
 import EnvironmentPanel from '../components/EnvironmentPanel';
 import LinkStatusBar from '../components/LinkStatusBar';
 import BodyCamPanel from '../components/BodyCamPanel';
+import SessionRecords from '../components/SessionRecords';
 import { getBufferedSamples } from '../hooks/useDownlink';
 import {
   metricDefinitions,
   getVitalContext,
   getTaskMetrics,
   getTaskPrimaryMetrics,
+  getEnvironment,
 } from '../data/mockData';
 
 const TABS = [
   { id: 'live', label: 'Live', icon: Activity },
   { id: 'history', label: 'History', icon: History },
   { id: 'camera', label: 'Body Cam', icon: Video },
+  { id: 'records', label: 'Records', icon: Archive },
   { id: 'assignments', label: 'Assignments', icon: ClipboardList },
   { id: 'environment', label: 'Environment', icon: Globe2 },
 ];
 
 export default function GroundView({
   crewData,
+  records,
   alerts,
   selectedSection,
   selectedAstronaut,
@@ -50,6 +54,15 @@ export default function GroundView({
   // The main panel shows an astronaut only when they work in the selected environment
   const focused = member?.env === selectedSection ? member : null;
   const link = links[selectedSection];
+  // Completed sessions in this environment stay visible after the crew moves on
+  const envRecords = Object.values(records).filter((r) => r.member.env === selectedSection);
+  const recordsPanel = (
+    <SessionRecords
+      records={envRecords}
+      crewData={crewData}
+      title={`Recorded sessions · ${getEnvironment(selectedSection).name}`}
+    />
+  );
 
   return (
     <main className="max-w-[1600px] mx-auto px-4 py-5 space-y-5">
@@ -91,6 +104,8 @@ export default function GroundView({
             <AstronautDetail
               member={focused}
               crewData={crewData}
+              records={records}
+              recordsPanel={recordsPanel}
               tab={tab}
               onChangeTab={onChangeTab}
               link={link}
@@ -106,6 +121,8 @@ export default function GroundView({
             <EmptyEnvironment
               envId={selectedSection}
               crewData={crewData}
+              records={records}
+              recordsPanel={recordsPanel}
               onAssignTask={onAssignTask}
             />
           )}
@@ -119,6 +136,8 @@ export default function GroundView({
 function AstronautDetail({
   member,
   crewData,
+  records,
+  recordsPanel,
   tab,
   onChangeTab,
   link,
@@ -145,7 +164,12 @@ function AstronautDetail({
 
   return (
     <>
-      <AstronautProfile member={member} onAssignTask={onAssignTask} />
+      <AstronautProfile
+        member={member}
+        crewData={crewData}
+        records={records}
+        onAssignTask={onAssignTask}
+      />
 
       <div className="flex gap-1 border-b border-space-600 overflow-x-auto">
         {TABS.map(({ id, label, icon: Icon }) => (
@@ -200,9 +224,11 @@ function AstronautDetail({
           onSelect={onSelectAstronaut}
         />
       )}
+      {tab === 'records' && recordsPanel}
       {tab === 'assignments' && (
         <AssignmentsPanel
           crewData={crewData}
+          records={records}
           selectedId={member.id}
           onSelectAstronaut={onSelectAstronaut}
           onAssignTask={onAssignTask}

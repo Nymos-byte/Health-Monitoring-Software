@@ -1,17 +1,21 @@
 import { useState } from 'react';
 import { UserPlus } from 'lucide-react';
 import { getEnvironment, TASKS } from '../data/mockData';
+import { canAssignTask } from '../hooks/useRealtimeVitals';
 import { environmentIcons } from '../utils/metrics';
 import EnvironmentPanel from './EnvironmentPanel';
 import TaskSelect from './TaskSelect';
 
 // Environment with nobody working in it: explain it and offer to assign someone
-export default function EmptyEnvironment({ envId, crewData, onAssignTask }) {
+export default function EmptyEnvironment({ envId, crewData, records, recordsPanel, onAssignTask }) {
   const env = getEnvironment(envId);
   const Icon = environmentIcons[envId];
   const members = Object.values(crewData);
+  // Suggest a task here that the chosen astronaut is still allowed to do
+  const firstAvailableTask = (id) =>
+    TASKS.find((t) => t.environment === envId && canAssignTask(records, id, t.id))?.id ?? '';
   const [astronautId, setAstronautId] = useState(members[0].id);
-  const [taskId, setTaskId] = useState(TASKS.find((t) => t.environment === envId).id);
+  const [taskId, setTaskId] = useState(() => firstAvailableTask(members[0].id));
   const current = crewData[astronautId];
 
   return (
@@ -31,7 +35,10 @@ export default function EmptyEnvironment({ envId, crewData, onAssignTask }) {
           <span className="text-gray-400">Assign</span>
           <select
             value={astronautId}
-            onChange={(e) => setAstronautId(e.target.value)}
+            onChange={(e) => {
+              setAstronautId(e.target.value);
+              setTaskId(firstAvailableTask(e.target.value));
+            }}
             className="bg-space-900 border border-space-600 rounded-md px-2 py-1 text-gray-200 cursor-pointer"
           >
             {members.map((m) => (
@@ -39,10 +46,18 @@ export default function EmptyEnvironment({ envId, crewData, onAssignTask }) {
             ))}
           </select>
           <span className="text-gray-400">to</span>
-          <TaskSelect value={taskId} onChange={setTaskId} envId={envId} />
+          <TaskSelect
+            value={taskId}
+            onChange={setTaskId}
+            envId={envId}
+            astronautId={astronautId}
+            crewData={crewData}
+            records={records}
+          />
           <button
             onClick={() => onAssignTask(astronautId, taskId)}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-nasa-blue hover:bg-nasa-blue/80 text-white cursor-pointer"
+            disabled={!taskId || !canAssignTask(records, astronautId, taskId)}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-nasa-blue enabled:hover:bg-nasa-blue/80 text-white enabled:cursor-pointer disabled:opacity-40"
           >
             <UserPlus size={15} />
             Assign
@@ -54,6 +69,7 @@ export default function EmptyEnvironment({ envId, crewData, onAssignTask }) {
         </p>
       </div>
 
+      {recordsPanel}
       <EnvironmentPanel selectedSection={envId} />
     </div>
   );
