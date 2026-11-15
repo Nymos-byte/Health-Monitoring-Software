@@ -7,6 +7,7 @@ import CriticalAlertModal from './components/CriticalAlertModal';
 import { generateCrewData, initialAlerts, getTask } from './data/mockData';
 import { useRealtimeVitals } from './hooks/useRealtimeVitals';
 import { useDownlink } from './hooks/useDownlink';
+import { useCloudSync } from './hooks/useCloudSync';
 import { getCriticalReadings, criticalKey } from './utils/metrics';
 import { getAutoTheme, readThemeChoice, saveThemeChoice } from './utils/theme';
 
@@ -38,6 +39,7 @@ function App() {
   const [groundTab, setGroundTab] = useState('live');
   const [crewPage, setCrewPage] = useState('vitals');
   const [themeChoice, setThemeChoice] = useState(readThemeChoice);
+  const cloud = useCloudSync();
   // Acknowledged critical readings, kept separately for ground and crew:
   // "<audience>|<astronaut>:<phase>:<metric>". The wrist and tablet belong to the same astronaut,
   // so acknowledging on one silences both.
@@ -164,7 +166,14 @@ function App() {
   return (
     <div className="min-h-screen bg-space-900 text-white">
       {/* Crew devices have their own compact chrome to save space on small screens */}
-      {view === 'ground' && <Header view={view} onChangeView={handleChangeView} />}
+      {view === 'ground' && (
+        <Header
+          view={view}
+          onChangeView={handleChangeView}
+          cloud={cloud}
+          onSendSnapshot={() => cloud.sendSnapshot(crewData[selectedAstronaut])}
+        />
+      )}
       {view === 'wrist' && (
         <WristView
           {...shared}
