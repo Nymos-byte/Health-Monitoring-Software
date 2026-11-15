@@ -1,37 +1,45 @@
 import { useState } from 'react';
-import { CheckCircle2, AlertTriangle, AlertOctagon, ChevronDown, ClipboardList } from 'lucide-react';
+import {
+  CheckCircle2,
+  AlertTriangle,
+  AlertOctagon,
+  ChevronDown,
+  SatelliteDish,
+  WifiOff,
+} from 'lucide-react';
 import {
   metricDefinitions,
-  getMetricRange,
   getVitalContext,
   getEnvironment,
   getTaskMetrics,
   getTaskPrimaryMetrics,
   MISSION_PHASES,
 } from '../data/mockData';
-import { getEvaPartners } from '../utils/missions';
 import { getVitalStatus, getStatusColor } from '../utils/helpers';
 import {
-  metricIcons,
   crewLabels,
   getCrewAdvice,
   formatMetricValue,
   criticalKey,
-  getStatusOutline,
   getCriticalReadings,
 } from '../utils/metrics';
-import TaskSelect from '../components/TaskSelect';
+import CrewVitalTile from '../components/CrewVitalTile';
+import CrewActivityPanel from '../components/CrewActivityPanel';
+import CrewmatesStrip from '../components/CrewmatesStrip';
+import PreviousActivities from '../components/PreviousActivities';
 
-const crewStatusLabel = { nominal: 'Normal', caution: 'Watch', critical: 'Alert' };
 const severityRank = { critical: 0, caution: 1, nominal: 2 };
 
 export default function CrewView({
   crewData,
   records,
   missions,
+  links,
+  now,
   selectedAstronaut,
   onSelectAstronaut,
   onAssignTask,
+  onPlanTask,
   blinking,
   emergencies,
   onToggleEmergency,
@@ -42,7 +50,7 @@ export default function CrewView({
   const vitals = member.data.currentVitals;
   const context = getVitalContext(member, vitals);
   const mission = missions[member.missionId];
-  const partners = getEvaPartners(member, crewData);
+  const link = links[member.env];
 
   // The readings on screen follow the astronaut's current task (e.g. suit telemetry during EVA)
   const numericMetrics = getTaskMetrics(member.task).filter((k) => !metricDefinitions[k].isCategorical);
@@ -67,28 +75,25 @@ export default function CrewView({
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-6 space-y-5">
-      {/* Who, where and what they are doing */}
-      <div className="flex items-center gap-4">
+      {/* Who and where, plus whether Mission Control is receiving their data */}
+      <div className="flex flex-wrap items-center gap-4">
         <span className="text-5xl">{member.avatar}</span>
-        <div>
+        <div className="flex-1 min-w-[220px]">
           <h2 className="text-2xl font-bold">{member.name}</h2>
           <p className="text-gray-400">
             {mission.name} · {MISSION_PHASES[mission.phase].label} · {env.name} · {env.missionDayLabel}
             {vitals.flight_phase && env.id === 'spacecraft' && ` · ${vitals.flight_phase}`}
           </p>
-          <p className="mt-1 flex items-center gap-2 text-gray-200">
-            <ClipboardList size={16} className="text-vital-cyan" />
-            {member.task.name}
-            <span className="text-gray-500">· {member.task.activity} activity</span>
-          </p>
-          {member.task.eva && (
-            <p className={`text-sm ${partners.length ? 'text-gray-400' : 'text-vital-orange'}`}>
-              {partners.length
-                ? `With ${partners.map((p) => p.name).join(', ')}`
-                : 'No EVA partner assigned — do not go out alone'}
-            </p>
-          )}
         </div>
+        {link.status === 'aos' ? (
+          <span className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-vital-green/40 text-sm text-vital-green">
+            <SatelliteDish size={15} /> Ground link live
+          </span>
+        ) : (
+          <span className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-vital-orange/50 text-sm text-vital-orange">
+            <WifiOff size={15} /> No ground link · data saved onboard
+          </span>
+        )}
       </div>
 
       <StatusBanner
@@ -102,7 +107,7 @@ export default function CrewView({
       {/* Essential readings */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {primary.map((key) => (
-          <PrimaryTile
+          <CrewVitalTile
             key={key}
             metricKey={key}
             vitals={vitals}
@@ -112,6 +117,19 @@ export default function CrewView({
           />
         ))}
       </div>
+
+      <CrewActivityPanel
+        key={`${member.id}:${member.taskId}`}
+        member={member}
+        crewData={crewData}
+        records={records}
+        missions={missions}
+        now={now}
+        onAssignTask={onAssignTask}
+        onPlanTask={onPlanTask}
+      />
+
+      <CrewmatesStrip member={member} crewData={crewData} />
 
       {/* Less critical readings, hidden by default */}
       <div className="bg-space-800/60 border border-space-600 rounded-2xl">
@@ -147,7 +165,9 @@ export default function CrewView({
         )}
       </div>
 
-      {/* Demo controls: on a real mission the astronaut and task come from the device and the plan */}
+      <PreviousActivities key={member.id} member={member} records={records} />
+
+      {/* Demo controls: on a real mission the device knows who is wearing it */}
       <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-space-700 text-xs text-gray-500">
         <span className="uppercase tracking-wider">Simulation</span>
         <select
@@ -159,15 +179,6 @@ export default function CrewView({
             <option key={m.id} value={m.id}>{m.name}</option>
           ))}
         </select>
-        <TaskSelect
-          value={member.taskId}
-          onChange={(taskId) => onAssignTask(member.id, taskId)}
-          astronautId={member.id}
-          crewData={crewData}
-          records={records}
-          missions={missions}
-          className="!text-xs !text-gray-300"
-        />
         <button
           onClick={() => onToggleEmergency(member.id)}
           className={`px-2 py-1 rounded-md border cursor-pointer ${
@@ -228,41 +239,6 @@ function StatusBanner({ issues, rules, vitals, sectionId, context }) {
           </li>
         ))}
       </ul>
-    </div>
-  );
-}
-
-function PrimaryTile({ metricKey, vitals, sectionId, context, blinking }) {
-  const def = metricDefinitions[metricKey];
-  const Icon = metricIcons[metricKey];
-  const status = getVitalStatus(metricKey, vitals[metricKey], sectionId, context);
-  const color = getStatusColor(status);
-  const range = getMetricRange(metricKey, sectionId, context);
-  const outline = getStatusOutline(status, blinking);
-
-  return (
-    <div className={`p-5 rounded-2xl bg-space-800/80 border-2 ${outline.className}`} style={outline.style}>
-      <div className="flex items-center gap-2 text-gray-300 mb-3">
-        <Icon size={20} />
-        <span className="text-base">{crewLabels[metricKey]}</span>
-      </div>
-      <div className="flex items-baseline gap-2">
-        <span className="text-5xl font-bold font-mono tracking-tight" style={{ color }}>
-          {formatMetricValue(metricKey, vitals)}
-        </span>
-        <span className="text-gray-400">{def.unit}</span>
-      </div>
-      <div className="mt-3 flex items-center justify-between text-sm">
-        <span className="font-semibold" style={{ color }}>{crewStatusLabel[status]}</span>
-        {range && (
-          <span className="text-gray-500 font-mono text-right">
-            {range.min}–{range.max}
-            {range.adjustedFor && (
-              <span className="block text-[11px] text-vital-cyan">{range.adjustedFor} activity</span>
-            )}
-          </span>
-        )}
-      </div>
     </div>
   );
 }

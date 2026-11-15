@@ -1,21 +1,18 @@
 import { useState } from 'react';
 import { ChevronDown, Lock, RefreshCw } from 'lucide-react';
 import HistoryPanel from './HistoryPanel';
+import VitalCards from './VitalCards';
 import {
   metricDefinitions,
   getVitalContext,
   getTaskMetrics,
   getTaskPrimaryMetrics,
 } from '../data/mockData';
-import { getVitalStatus, getStatusColor, formatTimestamp } from '../utils/helpers';
+import { getVitalStatus, getStatusColor, formatTimestamp, formatDuration } from '../utils/helpers';
 import { formatMetricValue } from '../utils/metrics';
 
-function formatDuration(ms) {
-  const minutes = Math.max(1, Math.round(ms / 60000));
-  if (minutes < 60) return `${minutes} min`;
-  const hours = Math.round(minutes / 60);
-  return `${hours} h`;
-}
+// Recorded readings never blink: the emergency, if any, was handled live
+const NO_BLINK = new Set();
 
 // Completed task sessions kept on the ground. A repeatable task keeps its latest session until
 // the astronaut does it again; a one-time task keeps its record for good.
@@ -89,7 +86,27 @@ export default function SessionRecords({ records, crewData, title }) {
               </button>
 
               {isOpen && (
-                <div className="px-4 pb-4">
+                <div className="px-4 pb-4 space-y-4">
+                  <VitalCards
+                    title="Last recorded readings"
+                    metrics={getTaskPrimaryMetrics(member.task)}
+                    vitals={vitals}
+                    astronautId={member.id}
+                    selectedSection={member.env}
+                    context={context}
+                    blinking={NO_BLINK}
+                    size="lg"
+                  />
+                  <VitalCards
+                    metrics={getTaskMetrics(member.task).filter(
+                      (k) => !metricDefinitions[k].isCategorical && !getTaskPrimaryMetrics(member.task).includes(k)
+                    )}
+                    vitals={vitals}
+                    astronautId={member.id}
+                    selectedSection={member.env}
+                    context={context}
+                    blinking={NO_BLINK}
+                  />
                   <HistoryPanel
                     vitals={member.data.vitals}
                     metrics={getTaskMetrics(member.task).filter((k) => !metricDefinitions[k].isCategorical)}

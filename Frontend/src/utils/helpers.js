@@ -101,3 +101,12 @@ export function formatTimestamp(isoString) {
   if (hours < 24) return `${hours}h ago`;
   return date.toLocaleDateString('en-US');
 }
+
+// Human-friendly length of an activity or session
+export function formatDuration(ms) {
+  const minutes = Math.max(1, Math.round(ms / 60000));
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 48) return minutes % 60 && hours < 10 ? `${hours} h ${minutes % 60} min` : `${hours} h`;
+  return `${Math.round(hours / 24)} days`;
+}

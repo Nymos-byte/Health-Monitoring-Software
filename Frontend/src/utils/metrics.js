@@ -53,6 +53,8 @@ export const metricIcons = {
   cumulative_radiation_mgy: Radiation,
 };
 
+export const crewStatusLabel = { nominal: 'Normal', caution: 'Watch', critical: 'Alert' };
+
 // Short, plain-language names for the in-flight crew display
 export const crewLabels = {
   heart_rate_bpm: 'Heart Rate',

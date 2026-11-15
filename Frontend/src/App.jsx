@@ -15,8 +15,16 @@ function getViewFromHash() {
 
 function App() {
   const initialData = useMemo(() => generateCrewData(), []);
-  const { crewData, records, missions, emergencies, toggleEmergency, assignTask, advancePhase } =
-    useRealtimeVitals(initialData);
+  const {
+    crewData,
+    records,
+    missions,
+    emergencies,
+    toggleEmergency,
+    assignTask,
+    planTask,
+    advancePhase,
+  } = useRealtimeVitals(initialData);
   // Crew sees onboard data; ground sees only what the downlink has delivered
   const { groundData, links, now, forcedLoss, toggleLinkLoss } = useDownlink(crewData);
   const [view, setView] = useState(getViewFromHash);
@@ -81,9 +89,10 @@ function App() {
     if (first) setSelectedAstronaut(first.id);
   };
   const handleAssignTask = (id, taskId) => {
-    if (!assignTask(id, taskId)) return;
+    if (!assignTask(id, taskId)) return false;
     setSelectedAstronaut(id);
     setSelectedSection(getTask(taskId).environment);
+    return true;
   };
 
   // Moving a mission to its next phase takes its whole crew there; follow the selected astronaut
@@ -114,6 +123,9 @@ function App() {
     onAssignTask: handleAssignTask,
     missions,
     onAdvancePhase: handleAdvancePhase,
+    onPlanTask: planTask,
+    links,
+    now,
     blinking,
     emergencies,
     onToggleEmergency: toggleEmergency,
@@ -129,8 +141,6 @@ function App() {
           {...shared}
           crewData={groundData}
           onboardData={crewData}
-          links={links}
-          now={now}
           forcedLoss={forcedLoss}
           onToggleLinkLoss={toggleLinkLoss}
           onAcknowledge={handleAcknowledge}

@@ -121,8 +121,23 @@ export function useRealtimeVitals(initialCrewData) {
 
     setCrewData((prev) => {
       const index = crewMembers.findIndex((m) => m.id === astronautId);
-      return { ...prev, [astronautId]: buildAssignment(crewMembers[index], taskId, index) };
+      const assigned = buildAssignment(crewMembers[index], taskId, index);
+      // Keep the crew's announced next task unless that is the one starting now
+      const planned = prev[astronautId].plannedTaskId;
+      return {
+        ...prev,
+        [astronautId]: planned && planned !== taskId ? { ...assigned, plannedTaskId: planned } : assigned,
+      };
     });
+    return true;
+  }, []);
+
+  // The astronaut tells ground what they will do next (null clears it). It travels with their
+  // telemetry, so ground sees it when the downlink delivers it.
+  const planTask = useCallback((astronautId, taskId) => {
+    const member = crewRef.current[astronautId];
+    if (taskId && !canAssignTask(recordsRef.current, missionsRef.current, member, taskId)) return false;
+    setCrewData((prev) => ({ ...prev, [astronautId]: { ...prev[astronautId], plannedTaskId: taskId } }));
     return true;
   }, []);
 
@@ -167,7 +182,16 @@ export function useRealtimeVitals(initialCrewData) {
     return () => clearInterval(interval);
   }, [updateVitals]);
 
-  return { crewData, records, missions, emergencies, toggleEmergency, assignTask, advancePhase };
+  return {
+    crewData,
+    records,
+    missions,
+    emergencies,
+    toggleEmergency,
+    assignTask,
+    planTask,
+    advancePhase,
+  };
 }
 
 function randomDelta(magnitude) {

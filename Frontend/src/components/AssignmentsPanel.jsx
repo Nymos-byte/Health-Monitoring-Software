@@ -1,5 +1,5 @@
 import { ChevronRight, AlertTriangle } from 'lucide-react';
-import { MISSION_PHASES, MISSION_TYPES, getEnvironment } from '../data/mockData';
+import { MISSION_PHASES, MISSION_TYPES, getEnvironment, getTask } from '../data/mockData';
 import { getStatusColor, getMemberStatus, calculateHealthScore } from '../utils/helpers';
 import { getNextPhase, getEvaPartners } from '../utils/missions';
 import TaskSelect from './TaskSelect';
@@ -95,6 +95,11 @@ export default function AssignmentsPanel({
                       records={records}
                       missions={missions}
                     />
+                    {m.plannedTaskId && (
+                      <span className="text-xs text-vital-cyan">
+                        Next: {getTask(m.plannedTaskId).name}
+                      </span>
+                    )}
                     {soloEva && (
                       <span className="flex items-center gap-1 text-xs text-vital-orange">
                         <AlertTriangle size={13} /> EVA without a partner

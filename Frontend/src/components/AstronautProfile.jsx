@@ -4,7 +4,7 @@ import {
   getMemberStatus,
   calculateHealthScore,
 } from '../utils/helpers';
-import { getEnvironment, MISSION_PHASES } from '../data/mockData';
+import { getEnvironment, getTask, MISSION_PHASES } from '../data/mockData';
 import { getEvaPartners } from '../utils/missions';
 import TaskSelect from './TaskSelect';
 
@@ -18,6 +18,7 @@ export default function AstronautProfile({ member, crewData, records, missions, 
   const healthScore = calculateHealthScore(member);
   const mission = missions[member.missionId];
   const partners = getEvaPartners(member, crewData);
+  const planned = member.plannedTaskId && getTask(member.plannedTaskId);
 
   const facts = [
     `${mission.name} · ${MISSION_PHASES[mission.phase].label}`,
@@ -56,6 +57,11 @@ export default function AstronautProfile({ member, crewData, records, missions, 
             ({env.name} · {member.task.activity} activity)
           </span>
         </label>
+        {planned && (
+          <p className="mt-1 text-xs text-vital-cyan">
+            Up next (reported by crew): {planned.name} · {planned.activity}
+          </p>
+        )}
         {member.task.eva && (
           <p className={`mt-1 text-xs ${partners.length ? 'text-gray-400' : 'text-vital-orange'}`}>
             {partners.length
