@@ -1,7 +1,7 @@
 # Tools reference
 
 Help for every tool in the repository: the Python scripts, the web app's npm scripts, the
-telemetry API and deployment. For the AI assistant, see [`AI_ASSISTANT.md`](AI_ASSISTANT.md).
+telemetry API and deployment.
 
 ## Requirements
 

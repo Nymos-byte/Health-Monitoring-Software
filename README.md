@@ -83,10 +83,9 @@ ablations and limitations are in [`docs/ML_PIPELINE.md`](docs/ML_PIPELINE.md).
 ├── model/                    # Training script and trained models (.joblib)
 ├── data/
 │   ├── simulated/            # sim_daily.csv, sim_eva.csv, parameters_sources.csv
-│   └── original/             # Earlier team CSVs (origin unverified, kept for reference)
+│   └── original/             # NASA health indicators reference table used by the app
 ├── results/                  # Evaluation tables (CSV)
-├── docs/                     # Documentation (below)
-└── Vital-X_Conversacion_y_Recursos/   # Design history and visual resources (Spanish)
+└── docs/                     # Documentation (below)
 ```
 
 ## Documentation
@@ -97,11 +96,14 @@ ablations and limitations are in [`docs/ML_PIPELINE.md`](docs/ML_PIPELINE.md).
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Modules, mission model, alert logic, downlink, black box and the telemetry API |
 | [`docs/TOOLS.md`](docs/TOOLS.md) | Help for every tool: Python scripts, npm scripts, API, environment variables, deployment |
 | [`docs/ML_PIPELINE.md`](docs/ML_PIPELINE.md) | Simulator calibration, models, full results and limitations |
-| [`docs/AI_ASSISTANT.md`](docs/AI_ASSISTANT.md) | How AI (Claude) was used, and how to use it on this repository |
 | [`docs/SOURCES.md`](docs/SOURCES.md) | Every NASA/CSA source and how to cite it |
-| [`docs/DATA_AUDIT.md`](docs/DATA_AUDIT.md) | Integrity audit of the original CSVs |
-| [`docs/PITCH.md`](docs/PITCH.md) | 3-minute pitch script with demo cues (Spanish) |
 | [`data/simulated/README.md`](data/simulated/README.md) | Column glossary of the simulated data |
+
+## Use of AI
+
+The team used an AI assistant (Claude, by Anthropic) to help write code and documentation. All
+data is simulated and every calibration figure is traced to a NASA/CSA source in
+[`docs/SOURCES.md`](docs/SOURCES.md).
 
 ## Tech stack
 

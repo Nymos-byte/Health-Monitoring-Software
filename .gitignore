@@ -9,3 +9,17 @@ Thumbs.db
 
 # Zipped copies of folders already in the repo
 *.zip
+
+# Working material kept locally, not part of the published project
+CLAUDE.md
+Vital-X_Conversacion_y_Recursos/
+svg vital-x/
+docs/Vital-X_Contexto_del_Proyecto.docx
+docs/AI_ASSISTANT.md
+docs/DATA_AUDIT.md
+docs/PITCH.md
+docs/NASA_Sources_Citation_Guide.docx
+data/original/dataset_earth_preflight.csv
+data/original/dataset_eva_vehicle.csv
+data/original/dataset_space_station.csv
+data/original/dataset_spacecraft.csv

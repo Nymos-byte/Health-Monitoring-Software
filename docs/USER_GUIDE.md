@@ -125,5 +125,3 @@ to tell Mission Control how they feel. It closes on its own after a countdown, o
 4. *Body Cam* on the station (video) and on the spacecraft (snapshots).
 5. Crew Display → Vitals → Activity → Crew → Settings → Colours.
 6. Wrist → *Simulate emergency* → **OK** → *Do this now*.
-
-The full 3-minute script is in [`PITCH.md`](PITCH.md).
