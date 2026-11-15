@@ -2,15 +2,18 @@ import { useState, useMemo, useEffect } from 'react';
 import Header from './components/Header';
 import GroundView from './views/GroundView';
 import CrewView from './views/CrewView';
+import WristView from './views/WristView';
 import CriticalAlertModal from './components/CriticalAlertModal';
 import { generateCrewData, initialAlerts, getTask } from './data/mockData';
 import { useRealtimeVitals } from './hooks/useRealtimeVitals';
 import { useDownlink } from './hooks/useDownlink';
 import { getCriticalReadings, criticalKey } from './utils/metrics';
 
-// Each view has its own URL so it can be opened on a separate screen: #/ground or #/crew
+// Each view has its own URL so it can be opened on a separate screen
+const VIEW_HASHES = { ground: '#/ground', crew: '#/crew', wrist: '#/wrist' };
+
 function getViewFromHash() {
-  return window.location.hash === '#/crew' ? 'crew' : 'ground';
+  return Object.keys(VIEW_HASHES).find((v) => VIEW_HASHES[v] === window.location.hash) ?? 'ground';
 }
 
 function App() {
@@ -33,15 +36,18 @@ function App() {
   const [alerts, setAlerts] = useState(initialAlerts);
   const [groundTab, setGroundTab] = useState('live');
   const [crewPage, setCrewPage] = useState('vitals');
-  // Acknowledged critical readings, kept separately for each view: "<view>|<astronaut>:<phase>:<metric>"
+  // Acknowledged critical readings, kept separately for ground and crew:
+  // "<audience>|<astronaut>:<phase>:<metric>". The wrist and tablet belong to the same astronaut,
+  // so acknowledging on one silences both.
   const [acknowledged, setAcknowledged] = useState(() => new Set());
+  const audience = view === 'ground' ? 'ground' : 'crew';
 
-  // Ground watches the whole crew (as received); the crew display only the astronaut wearing it
+  // Ground watches the whole crew (as received); crew devices only the astronaut wearing them
   const criticalReadings =
-    view === 'crew'
+    audience === 'crew'
       ? getCriticalReadings(crewData, { astronautId: selectedAstronaut })
       : getCriticalReadings(groundData);
-  const unacknowledged = criticalReadings.filter((r) => !acknowledged.has(`${view}|${r.id}`));
+  const unacknowledged = criticalReadings.filter((r) => !acknowledged.has(`${audience}|${r.id}`));
   // Every reading involved in an unacknowledged emergency blinks
   const blinking = new Set(
     unacknowledged.flatMap((r) =>
@@ -64,7 +70,7 @@ function App() {
 
   // After acknowledging, take the viewer straight to the live vitals of the astronaut in trouble
   const handleAcknowledgeCritical = (ids) => {
-    setAcknowledged((prev) => new Set([...prev, ...ids.map((id) => `${view}|${id}`)]));
+    setAcknowledged((prev) => new Set([...prev, ...ids.map((id) => `${audience}|${id}`)]));
     const focus = unacknowledged[0];
     setSelectedAstronaut(focus.member.id);
     setSelectedSection(focus.section.id);
@@ -105,7 +111,7 @@ function App() {
   };
 
   const handleChangeView = (next) => {
-    window.location.hash = next === 'crew' ? '#/crew' : '#/ground';
+    window.location.hash = VIEW_HASHES[next];
   };
 
   const handleAcknowledge = (alertId) => {
@@ -135,16 +141,25 @@ function App() {
 
   return (
     <div className="min-h-screen bg-space-900 text-white stars-bg">
-      {/* The crew display has its own compact bar to save space on small screens */}
-      {view !== 'crew' && <Header view={view} onChangeView={handleChangeView} />}
-      {view === 'crew' ? (
+      {/* Crew devices have their own compact chrome to save space on small screens */}
+      {view === 'ground' && <Header view={view} onChangeView={handleChangeView} />}
+      {view === 'wrist' && (
+        <WristView
+          {...shared}
+          criticals={unacknowledged}
+          onAcknowledgeCritical={handleAcknowledgeCritical}
+          onChangeView={handleChangeView}
+        />
+      )}
+      {view === 'crew' && (
         <CrewView
           {...shared}
           page={crewPage}
           onChangePage={setCrewPage}
-          onOpenGround={() => handleChangeView('ground')}
+          onChangeView={handleChangeView}
         />
-      ) : (
+      )}
+      {view === 'ground' && (
         <GroundView
           {...shared}
           crewData={groundData}
@@ -156,11 +171,14 @@ function App() {
           onChangeTab={setGroundTab}
         />
       )}
-      <CriticalAlertModal
-        readings={unacknowledged}
-        audience={view}
-        onAcknowledge={handleAcknowledgeCritical}
-      />
+      {/* The wrist display shows emergencies on its own screen */}
+      {view !== 'wrist' && (
+        <CriticalAlertModal
+          readings={unacknowledged}
+          audience={audience}
+          onAcknowledge={handleAcknowledgeCritical}
+        />
+      )}
     </div>
   );
 }

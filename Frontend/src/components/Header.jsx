@@ -1,9 +1,10 @@
-import { Clock, MonitorDot, User } from 'lucide-react';
+import { Clock, MonitorDot, User, Watch } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 const VIEWS = [
   { id: 'ground', label: 'Ground Control', icon: MonitorDot },
   { id: 'crew', label: 'Crew Display', icon: User },
+  { id: 'wrist', label: 'Wrist', icon: Watch },
 ];
 
 export default function Header({ view, onChangeView }) {

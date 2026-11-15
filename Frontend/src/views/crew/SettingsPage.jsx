@@ -1,4 +1,4 @@
-import { Check, MonitorDot, Siren } from 'lucide-react';
+import { Check, MonitorDot, Siren, Watch } from 'lucide-react';
 
 // Display settings plus the demo controls that a real device would not need on its main screens
 export default function SettingsPage({
@@ -9,7 +9,7 @@ export default function SettingsPage({
   onTextSize,
   emergencyActive,
   onToggleEmergency,
-  onOpenGround,
+  onChangeView,
 }) {
   return (
     <div className="space-y-6">
@@ -64,13 +64,22 @@ export default function SettingsPage({
           <Siren size={22} />
           {emergencyActive ? 'End simulated emergency' : 'Simulate emergency'}
         </button>
-        <button
-          onClick={onOpenGround}
-          className="w-full min-h-[60px] rounded-xl border-2 border-space-600 flex items-center justify-center gap-2 text-lg text-gray-200 cursor-pointer"
-        >
-          <MonitorDot size={22} />
-          Open Ground Control
-        </button>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => onChangeView('wrist')}
+            className="min-h-[60px] rounded-xl border-2 border-space-600 flex items-center justify-center gap-2 text-lg text-gray-200 cursor-pointer"
+          >
+            <Watch size={22} />
+            Wrist display
+          </button>
+          <button
+            onClick={() => onChangeView('ground')}
+            className="min-h-[60px] rounded-xl border-2 border-space-600 flex items-center justify-center gap-2 text-lg text-gray-200 cursor-pointer"
+          >
+            <MonitorDot size={22} />
+            Ground Control
+          </button>
+        </div>
       </section>
     </div>
   );
