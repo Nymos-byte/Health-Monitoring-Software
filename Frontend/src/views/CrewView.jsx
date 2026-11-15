@@ -39,7 +39,6 @@ export default function CrewView({
   crewData,
   records,
   missions,
-  links,
   now,
   selectedAstronaut,
   onSelectAstronaut,
@@ -54,13 +53,13 @@ export default function CrewView({
   themeChoice,
   theme,
   onThemeChoice,
+  blackBox,
 }) {
   const [textSize, setTextSize] = useState(readTextSize);
   const member = crewData[selectedAstronaut];
   const env = getEnvironment(member.env);
   const vitals = member.data.currentVitals;
   const context = getVitalContext(member, vitals);
-  const link = links[member.env];
 
   // Larger text scales the whole crew display (Tailwind sizes are rem-based)
   useEffect(() => {
@@ -116,7 +115,7 @@ export default function CrewView({
               {env.shortName} · {member.task.name}
             </p>
           </div>
-          {link.status === 'aos' ? (
+          {blackBox.connected ? (
             <span className="flex flex-col items-center text-vital-green" title="Vitals are sent to ground automatically">
               <SatelliteDish size={20} />
               <span className="text-[10px] leading-tight">Sending</span>
@@ -124,7 +123,7 @@ export default function CrewView({
           ) : (
             <span className="flex flex-col items-center text-vital-orange" title="No ground link: vitals saved onboard">
               <WifiOff size={20} />
-              <span className="text-[10px] leading-tight">Onboard</span>
+              <span className="text-[10px] leading-tight">Onboard · {blackBox.stored}</span>
             </span>
           )}
           <button

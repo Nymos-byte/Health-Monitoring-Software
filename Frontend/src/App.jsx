@@ -7,7 +7,7 @@ import CriticalAlertModal from './components/CriticalAlertModal';
 import { generateCrewData, initialAlerts, getTask } from './data/mockData';
 import { useRealtimeVitals } from './hooks/useRealtimeVitals';
 import { useDownlink } from './hooks/useDownlink';
-import { useCloudSync } from './hooks/useCloudSync';
+import { useBlackBox } from './hooks/useBlackBox';
 import { getCriticalReadings, criticalKey } from './utils/metrics';
 import { getAutoTheme, readThemeChoice, saveThemeChoice } from './utils/theme';
 
@@ -39,7 +39,9 @@ function App() {
   const [groundTab, setGroundTab] = useState('live');
   const [crewPage, setCrewPage] = useState('vitals');
   const [themeChoice, setThemeChoice] = useState(readThemeChoice);
-  const cloud = useCloudSync();
+  // The selected astronaut's device: records on its own, keeps data onboard without a link
+  const wearer = crewData[selectedAstronaut];
+  const blackBox = useBlackBox(wearer, links[wearer.env].status === 'aos');
   // Acknowledged critical readings, kept separately for ground and crew:
   // "<audience>|<astronaut>:<phase>:<metric>". The wrist and tablet belong to the same astronaut,
   // so acknowledging on one silences both.
@@ -161,6 +163,7 @@ function App() {
     themeChoice,
     theme,
     onThemeChoice: handleThemeChoice,
+    blackBox,
   };
 
   return (
@@ -170,8 +173,8 @@ function App() {
         <Header
           view={view}
           onChangeView={handleChangeView}
-          cloud={cloud}
-          onSendSnapshot={() => cloud.sendSnapshot(crewData[selectedAstronaut])}
+          blackBox={blackBox}
+          wearer={wearer}
         />
       )}
       {view === 'wrist' && (

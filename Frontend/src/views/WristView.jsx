@@ -24,7 +24,6 @@ export default function WristView({
   crewData,
   records,
   missions,
-  links,
   now,
   selectedAstronaut,
   onSelectAstronaut,
@@ -37,6 +36,7 @@ export default function WristView({
   onChangeView,
   themeChoice,
   onThemeChoice,
+  blackBox,
 }) {
   const member = crewData[selectedAstronaut];
   const vitals = member.data.currentVitals;
@@ -128,7 +128,7 @@ export default function WristView({
             ) : (
               <>
                 {pages[index] === 'status' && (
-                  <StatusScreen member={member} vitals={vitals} context={context} issues={issues} link={links[member.env]} />
+                  <StatusScreen member={member} vitals={vitals} context={context} issues={issues} blackBox={blackBox} />
                 )}
                 {pages[index] === 'activity' && (
                   <ActivityScreen
@@ -211,7 +211,7 @@ export default function WristView({
 }
 
 // Overall state as a coloured ring around the heart rate, oxygen underneath
-function StatusScreen({ member, vitals, context, issues, link }) {
+function StatusScreen({ member, vitals, context, issues, blackBox }) {
   const status = getMemberStatus(member);
   const color = getStatusColor(status);
   const second = member.task.eva ? 'suit_pressure_psia' : 'spo2_pct';
@@ -221,9 +221,9 @@ function StatusScreen({ member, vitals, context, issues, link }) {
 
   return (
     <div className="h-full flex flex-col items-center pt-5">
-      <div className="flex items-center gap-1.5 text-[11px]" style={{ color: link.status === 'aos' ? 'var(--color-vital-green)' : 'var(--color-vital-orange)' }}>
-        {link.status === 'aos' ? <SatelliteDish size={12} /> : <WifiOff size={12} />}
-        {link.status === 'aos' ? 'Sending' : 'Saved onboard'}
+      <div className="flex items-center gap-1.5 text-[11px]" style={{ color: blackBox.connected ? 'var(--color-vital-green)' : 'var(--color-vital-orange)' }}>
+        {blackBox.connected ? <SatelliteDish size={12} /> : <WifiOff size={12} />}
+        {blackBox.connected ? 'Sending' : `Saved onboard · ${blackBox.stored}`}
       </div>
       <div className="relative mt-1">
         <svg width="136" height="136" viewBox="0 0 136 136" className="-rotate-90">

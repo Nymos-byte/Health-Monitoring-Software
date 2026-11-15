@@ -1,4 +1,4 @@
-import { Clock, MonitorDot, User, Watch, Cloud, CloudOff, UploadCloud } from 'lucide-react';
+import { Clock, MonitorDot, User, Watch, Database, CloudOff } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 const VIEWS = [
@@ -7,7 +7,7 @@ const VIEWS = [
   { id: 'wrist', label: 'Wrist', icon: Watch },
 ];
 
-export default function Header({ view, onChangeView, cloud, onSendSnapshot }) {
+export default function Header({ view, onChangeView, blackBox, wearer }) {
   const [time, setTime] = useState(() => new Date());
 
   useEffect(() => {
@@ -45,27 +45,29 @@ export default function Header({ view, onChangeView, cloud, onSendSnapshot }) {
         </nav>
 
         <div className="flex items-center gap-3">
-          {/* Device connection and the onboard black box (snapshots waiting to reach the cloud) */}
+          {/* Black box on the selected astronaut's device: what it holds and whether it reaches ground */}
           <span
             className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs ${
-              cloud.isOnline
+              blackBox.connected && blackBox.cloud === 'synced'
                 ? 'border-vital-green/40 text-vital-green'
                 : 'border-vital-orange/50 text-vital-orange'
             }`}
-            title="Device connection"
+            title={`Black box on ${wearer.name}'s device`}
           >
-            {cloud.isOnline ? <Cloud size={13} /> : <CloudOff size={13} />}
-            {cloud.isOnline ? 'Online' : 'Offline'}
-            {cloud.pending > 0 && <span className="text-gray-400">· {cloud.pending} on device</span>}
+            {blackBox.connected ? <Database size={13} /> : <CloudOff size={13} />}
+            Black box
+            <span className="text-gray-400">
+              {!blackBox.connected
+                ? `· no link · ${blackBox.stored} stored onboard`
+                : blackBox.cloud === 'unconfigured'
+                  ? `· ${blackBox.stored} waiting · cloud not configured`
+                  : blackBox.cloud === 'unreachable'
+                    ? `· ${blackBox.stored} waiting · cloud unreachable`
+                    : blackBox.lastSync
+                      ? `· synced ${blackBox.lastSync.count} to ground`
+                      : '· live'}
+            </span>
           </span>
-          <button
-            onClick={onSendSnapshot}
-            className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-space-600 text-xs text-gray-300 hover:text-white hover:border-space-500 cursor-pointer"
-            title="Store the selected astronaut's current readings in the cloud (or on the device while offline)"
-          >
-            <UploadCloud size={13} />
-            {cloud.notice ?? 'Send snapshot'}
-          </button>
           <div className="flex items-center gap-2 text-gray-400">
             <Clock size={14} />
             <span className="text-sm font-mono font-bold text-white">{utcTime}</span>
