@@ -28,6 +28,14 @@
   border-radius: 3px;
 }
 
+/* Horizontally swipeable rows on the crew display, without a visible scrollbar */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Pulse animation for critical alerts */
 @keyframes pulse-glow {
   0%, 100% { box-shadow: 0 0 5px rgba(255, 68, 68, 0.3); }

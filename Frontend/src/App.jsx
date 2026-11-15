@@ -32,6 +32,7 @@ function App() {
   const [selectedSection, setSelectedSection] = useState(() => initialData['ast-001'].env);
   const [alerts, setAlerts] = useState(initialAlerts);
   const [groundTab, setGroundTab] = useState('live');
+  const [crewPage, setCrewPage] = useState('vitals');
   // Acknowledged critical readings, kept separately for each view: "<view>|<astronaut>:<phase>:<metric>"
   const [acknowledged, setAcknowledged] = useState(() => new Set());
 
@@ -68,6 +69,7 @@ function App() {
     setSelectedAstronaut(focus.member.id);
     setSelectedSection(focus.section.id);
     setGroundTab('live');
+    setCrewPage('vitals');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -133,9 +135,15 @@ function App() {
 
   return (
     <div className="min-h-screen bg-space-900 text-white stars-bg">
-      <Header view={view} onChangeView={handleChangeView} />
+      {/* The crew display has its own compact bar to save space on small screens */}
+      {view !== 'crew' && <Header view={view} onChangeView={handleChangeView} />}
       {view === 'crew' ? (
-        <CrewView {...shared} />
+        <CrewView
+          {...shared}
+          page={crewPage}
+          onChangePage={setCrewPage}
+          onOpenGround={() => handleChangeView('ground')}
+        />
       ) : (
         <GroundView
           {...shared}

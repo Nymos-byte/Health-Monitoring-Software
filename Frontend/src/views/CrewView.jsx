@@ -1,35 +1,40 @@
-import { useState } from 'react';
-import {
-  CheckCircle2,
-  AlertTriangle,
-  AlertOctagon,
-  ChevronDown,
-  SatelliteDish,
-  WifiOff,
-} from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { HeartPulse, ClipboardList, Users, History, Settings, SatelliteDish, WifiOff } from 'lucide-react';
 import {
   metricDefinitions,
   getVitalContext,
   getEnvironment,
   getTaskMetrics,
   getTaskPrimaryMetrics,
-  MISSION_PHASES,
 } from '../data/mockData';
-import { getVitalStatus, getStatusColor } from '../utils/helpers';
-import {
-  crewLabels,
-  getCrewAdvice,
-  formatMetricValue,
-  criticalKey,
-  getCriticalReadings,
-} from '../utils/metrics';
-import CrewVitalTile from '../components/CrewVitalTile';
-import CrewActivityPanel from '../components/CrewActivityPanel';
-import CrewmatesStrip from '../components/CrewmatesStrip';
-import PreviousActivities from '../components/PreviousActivities';
+import { getVitalStatus, getStatusColor, getMemberStatus } from '../utils/helpers';
+import { criticalKey, getCriticalReadings } from '../utils/metrics';
+import VitalsPage from './crew/VitalsPage';
+import ActivityPage from './crew/ActivityPage';
+import CrewPage from './crew/CrewPage';
+import LogPage from './crew/LogPage';
+import SettingsPage from './crew/SettingsPage';
 
 const severityRank = { critical: 0, caution: 1, nominal: 2 };
+const TEXT_SIZE_KEY = 'vitalx.crew.textSize';
 
+const TABS = [
+  { id: 'vitals', label: 'Vitals', icon: HeartPulse },
+  { id: 'activity', label: 'Activity', icon: ClipboardList },
+  { id: 'crew', label: 'Crew', icon: Users },
+  { id: 'log', label: 'Log', icon: History },
+];
+
+function readTextSize() {
+  try {
+    return localStorage.getItem(TEXT_SIZE_KEY) || 'normal';
+  } catch {
+    return 'normal';
+  }
+}
+
+// Crew display built for small cabin tablets and wrist/arm displays: a compact top bar,
+// one focused page at a time and a bottom tab bar with large targets.
 export default function CrewView({
   crewData,
   records,
@@ -43,21 +48,38 @@ export default function CrewView({
   blinking,
   emergencies,
   onToggleEmergency,
+  page,
+  onChangePage,
+  onOpenGround,
 }) {
-  const [showMore, setShowMore] = useState(false);
+  const [textSize, setTextSize] = useState(readTextSize);
   const member = crewData[selectedAstronaut];
   const env = getEnvironment(member.env);
   const vitals = member.data.currentVitals;
   const context = getVitalContext(member, vitals);
-  const mission = missions[member.missionId];
   const link = links[member.env];
 
-  // The readings on screen follow the astronaut's current task (e.g. suit telemetry during EVA)
+  // Larger text scales the whole crew display (Tailwind sizes are rem-based)
+  useEffect(() => {
+    document.documentElement.style.fontSize = textSize === 'large' ? '18px' : '';
+    return () => {
+      document.documentElement.style.fontSize = '';
+    };
+  }, [textSize]);
+
+  const handleTextSize = (size) => {
+    setTextSize(size);
+    try {
+      localStorage.setItem(TEXT_SIZE_KEY, size);
+    } catch {
+      // Storage unavailable: the choice still applies for this session
+    }
+  };
+
+  // The readings follow the current task (e.g. suit telemetry during EVA)
   const numericMetrics = getTaskMetrics(member.task).filter((k) => !metricDefinitions[k].isCategorical);
   const primary = getTaskPrimaryMetrics(member.task);
   const secondary = numericMetrics.filter((k) => !primary.includes(k));
-
-  // Every out-of-range reading becomes an action item, whether or not it is on the main screen
   const issues = numericMetrics
     .map((key) => ({ key, status: getVitalStatus(key, vitals[key], env.id, context) }))
     .filter((i) => i.status !== 'nominal')
@@ -66,203 +88,122 @@ export default function CrewView({
         severityRank[a.status] - severityRank[b.status] ||
         primary.includes(b.key) - primary.includes(a.key)
     );
-  const secondaryIssues = issues.filter((i) => secondary.includes(i.key)).length;
-  const isBlinking = (key) => blinking.has(criticalKey(member.id, env.id, key));
-  const emergencyActive = emergencies.has(member.id);
-  const activeRules = getCriticalReadings(crewData, { astronautId: member.id })
+  const rules = getCriticalReadings(crewData, { astronautId: member.id })
     .map((r) => r.rule)
     .filter(Boolean);
+  const isBlinking = (key) => blinking.has(criticalKey(member.id, env.id, key));
+
+  // Tab badges: my status on Vitals, the worst crewmate status on Crew
+  const myStatus = getMemberStatus(member);
+  const crewStatus = Object.values(crewData)
+    .filter((m) => m.missionId === member.missionId && m.id !== member.id)
+    .map((m) => getMemberStatus(m))
+    .sort((a, b) => severityRank[a] - severityRank[b])[0];
+  const badges = { vitals: myStatus, crew: crewStatus };
 
   return (
-    <main className="max-w-5xl mx-auto px-4 py-6 space-y-5">
-      {/* Who and where, plus whether Mission Control is receiving their data */}
-      <div className="flex flex-wrap items-center gap-4">
-        <span className="text-5xl">{member.avatar}</span>
-        <div className="flex-1 min-w-[220px]">
-          <h2 className="text-2xl font-bold">{member.name}</h2>
-          <p className="text-gray-400">
-            {mission.name} · {MISSION_PHASES[mission.phase].label} · {env.name} · {env.missionDayLabel}
-            {vitals.flight_phase && env.id === 'spacecraft' && ` · ${vitals.flight_phase}`}
-          </p>
-        </div>
-        {link.status === 'aos' ? (
-          <span className="flex items-center gap-2 px-4 py-2 rounded-full border border-vital-green/40 text-vital-green">
-            <SatelliteDish size={18} /> Sending vitals to ground automatically
-          </span>
-        ) : (
-          <span className="flex items-center gap-2 px-4 py-2 rounded-full border border-vital-orange/50 text-vital-orange">
-            <WifiOff size={18} /> No ground link · vitals saved onboard, sent when it returns
-          </span>
-        )}
-      </div>
-
-      <StatusBanner
-        issues={issues}
-        rules={activeRules}
-        vitals={vitals}
-        sectionId={env.id}
-        context={context}
-      />
-
-      {/* Essential readings */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {primary.map((key) => (
-          <CrewVitalTile
-            key={key}
-            metricKey={key}
-            vitals={vitals}
-            sectionId={env.id}
-            context={context}
-            blinking={isBlinking(key)}
-          />
-        ))}
-      </div>
-
-      <CrewActivityPanel
-        key={`${member.id}:${member.taskId}`}
-        member={member}
-        crewData={crewData}
-        records={records}
-        missions={missions}
-        now={now}
-        onAssignTask={onAssignTask}
-        onPlanTask={onPlanTask}
-      />
-
-      <CrewmatesStrip member={member} crewData={crewData} />
-
-      {/* Less critical readings, hidden by default */}
-      <div className="bg-space-800/60 border border-space-600 rounded-2xl">
-        <button
-          onClick={() => setShowMore((v) => !v)}
-          className="w-full flex items-center justify-between px-5 py-4 text-left cursor-pointer"
-        >
-          <span className="text-gray-300">
-            More readings
-            <span className="text-gray-500"> · {secondary.length}</span>
-            {secondaryIssues > 0 && (
-              <span className="ml-2 text-vital-orange">{secondaryIssues} to watch</span>
-            )}
-          </span>
-          <ChevronDown
-            size={20}
-            className={`text-gray-400 transition-transform ${showMore ? 'rotate-180' : ''}`}
-          />
-        </button>
-        {showMore && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 px-5 pb-4">
-            {secondary.map((key) => (
-              <SecondaryRow
-                key={key}
-                metricKey={key}
-                vitals={vitals}
-                sectionId={env.id}
-                context={context}
-                blinking={isBlinking(key)}
-              />
-            ))}
+    <div className="flex justify-center">
+      <div className="w-full max-w-[480px] min-h-[100dvh] flex flex-col sm:border-x sm:border-space-700 bg-space-900/70">
+        {/* Compact top bar */}
+        <header className="sticky top-0 z-30 flex items-center gap-3 px-3 h-16 bg-space-800/95 backdrop-blur border-b border-space-600">
+          <span className="text-3xl">{member.avatar}</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-lg font-semibold text-white truncate leading-tight">{member.name}</p>
+            <p className="text-xs text-gray-400 truncate">
+              {env.shortName} · {member.task.name}
+            </p>
           </div>
-        )}
-      </div>
-
-      <PreviousActivities key={member.id} member={member} records={records} />
-
-      {/* Demo controls: on a real mission the device knows who is wearing it */}
-      <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-space-700 text-xs text-gray-500">
-        <span className="uppercase tracking-wider">Simulation</span>
-        <select
-          value={selectedAstronaut}
-          onChange={(e) => onSelectAstronaut(e.target.value)}
-          className="bg-space-800 border border-space-600 rounded-md px-2 py-1 text-gray-300"
-        >
-          {Object.values(crewData).map((m) => (
-            <option key={m.id} value={m.id}>{m.name}</option>
-          ))}
-        </select>
-        <button
-          onClick={() => onToggleEmergency(member.id)}
-          className={`px-2 py-1 rounded-md border cursor-pointer ${
-            emergencyActive
-              ? 'border-vital-red text-vital-red'
-              : 'border-space-600 text-gray-400 hover:text-white'
-          }`}
-        >
-          {emergencyActive ? 'End emergency' : 'Simulate emergency'}
-        </button>
-      </div>
-    </main>
-  );
-}
-
-function StatusBanner({ issues, rules, vitals, sectionId, context }) {
-  if (issues.length === 0) {
-    return (
-      <div className="flex items-center gap-4 p-5 rounded-2xl bg-vital-green/10 border border-vital-green/40">
-        <CheckCircle2 size={40} className="text-vital-green shrink-0" />
-        <div>
-          <p className="text-2xl font-bold text-vital-green">All readings normal</p>
-          <p className="text-gray-300">No action needed. Continue your activity.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // A combined-sign emergency outranks its individual (orange) readings
-  const top = rules.length ? 'critical' : issues[0].status;
-  const color = getStatusColor(top);
-  const Icon = top === 'critical' ? AlertOctagon : AlertTriangle;
-
-  return (
-    <div
-      className={`p-5 rounded-2xl border ${top === 'critical' ? 'pulse-critical' : ''}`}
-      style={{ backgroundColor: `${color}1a`, borderColor: `${color}80` }}
-    >
-      <div className="flex items-center gap-4 mb-3">
-        <Icon size={40} style={{ color }} className="shrink-0" />
-        <p className="text-2xl font-bold" style={{ color }}>
-          {top === 'critical' ? 'Action required' : 'Keep an eye on'}
-        </p>
-      </div>
-      <ul className="space-y-2">
-        {rules.map((rule) => (
-          <li key={rule.id} className="flex flex-wrap items-baseline gap-x-3 text-lg">
-            <span className="font-semibold text-vital-red">{rule.label}</span>
-            <span className="text-gray-200">{rule.advice}</span>
-          </li>
-        ))}
-        {issues.map(({ key, status }) => (
-          <li key={key} className="flex flex-wrap items-baseline gap-x-3 text-lg">
-            <span className="font-semibold" style={{ color: getStatusColor(status) }}>
-              {crewLabels[key]} {formatMetricValue(key, vitals)} {metricDefinitions[key].unit}
+          {link.status === 'aos' ? (
+            <span className="flex flex-col items-center text-vital-green" title="Vitals are sent to ground automatically">
+              <SatelliteDish size={20} />
+              <span className="text-[10px] leading-tight">Sending</span>
             </span>
-            <span className="text-gray-200">{getCrewAdvice(key, vitals[key], sectionId, context)}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
+          ) : (
+            <span className="flex flex-col items-center text-vital-orange" title="No ground link: vitals saved onboard">
+              <WifiOff size={20} />
+              <span className="text-[10px] leading-tight">Onboard</span>
+            </span>
+          )}
+          <button
+            onClick={() => onChangePage(page === 'settings' ? 'vitals' : 'settings')}
+            className={`flex items-center justify-center w-12 h-12 rounded-xl cursor-pointer ${
+              page === 'settings' ? 'bg-space-600 text-white' : 'text-gray-300 hover:bg-space-700'
+            }`}
+            aria-label="Settings"
+          >
+            <Settings size={24} />
+          </button>
+        </header>
 
-function SecondaryRow({ metricKey, vitals, sectionId, context, blinking }) {
-  const def = metricDefinitions[metricKey];
-  const status = getVitalStatus(metricKey, vitals[metricKey], sectionId, context);
-  const color = getStatusColor(status);
+        <main className="flex-1 px-3 py-3">
+          {page === 'vitals' && (
+            <VitalsPage
+              vitals={vitals}
+              envId={env.id}
+              context={context}
+              primary={primary}
+              secondary={secondary}
+              issues={issues}
+              rules={rules}
+              isBlinking={isBlinking}
+            />
+          )}
+          {page === 'activity' && (
+            <ActivityPage
+              key={`${member.id}:${member.taskId}`}
+              member={member}
+              crewData={crewData}
+              records={records}
+              missions={missions}
+              now={now}
+              onAssignTask={onAssignTask}
+              onPlanTask={onPlanTask}
+            />
+          )}
+          {page === 'crew' && <CrewPage member={member} crewData={crewData} />}
+          {page === 'log' && <LogPage key={member.id} member={member} records={records} />}
+          {page === 'settings' && (
+            <SettingsPage
+              crewData={crewData}
+              member={member}
+              onSelectAstronaut={onSelectAstronaut}
+              textSize={textSize}
+              onTextSize={handleTextSize}
+              emergencyActive={emergencies.has(member.id)}
+              onToggleEmergency={() => onToggleEmergency(member.id)}
+              onOpenGround={onOpenGround}
+            />
+          )}
+        </main>
 
-  return (
-    <div className="flex items-center justify-between py-2.5 border-b border-space-700/70">
-      <span className="flex items-center gap-2 text-gray-300">
-        <span
-          className={`w-2 h-2 rounded-full ${blinking ? 'animate-pulse' : ''}`}
-          style={{ backgroundColor: color }}
-        />
-        {crewLabels[metricKey]}
-      </span>
-      <span className="font-mono">
-        <span style={{ color: status === 'nominal' ? '#e5e7eb' : color }}>
-          {formatMetricValue(metricKey, vitals)}
-        </span>
-        <span className="text-gray-500 text-sm ml-1">{def.unit}</span>
-      </span>
+        {/* Bottom tab bar: thumb-reachable, large targets */}
+        <nav className="sticky bottom-0 z-30 grid grid-cols-4 bg-space-800/95 backdrop-blur border-t border-space-600 pb-[env(safe-area-inset-bottom)]">
+          {TABS.map(({ id, label, icon: Icon }) => {
+            const badge = badges[id];
+            return (
+              <button
+                key={id}
+                onClick={() => onChangePage(id)}
+                className={`relative flex flex-col items-center justify-center gap-1 min-h-[72px] cursor-pointer ${
+                  page === id ? 'text-vital-cyan' : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                {page === id && <span className="absolute top-0 inset-x-4 h-1 rounded-b bg-vital-cyan" />}
+                <span className="relative">
+                  <Icon size={26} />
+                  {badge && badge !== 'nominal' && (
+                    <span
+                      className="absolute -top-1 -right-1.5 w-3 h-3 rounded-full border-2 border-space-800"
+                      style={{ backgroundColor: getStatusColor(badge) }}
+                    />
+                  )}
+                </span>
+                <span className="text-sm">{label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </div>
     </div>
   );
 }
