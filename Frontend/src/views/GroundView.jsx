@@ -1,4 +1,4 @@
-import { Activity, History, ClipboardList, Globe2, Video, Archive } from 'lucide-react';
+import { Activity, History, ClipboardList, Globe2, Video, Archive, Database, Cpu } from 'lucide-react';
 import PhaseTabs from '../components/PhaseTabs';
 import CrewRoster from '../components/CrewRoster';
 import AlertsPanel from '../components/AlertsPanel';
@@ -11,6 +11,8 @@ import EnvironmentPanel from '../components/EnvironmentPanel';
 import LinkStatusBar from '../components/LinkStatusBar';
 import BodyCamPanel from '../components/BodyCamPanel';
 import SessionRecords from '../components/SessionRecords';
+import DataSourceBar from '../components/DataSourceBar';
+import DemoControls from '../components/DemoControls';
 import { getBufferedSamples } from '../hooks/useDownlink';
 import {
   metricDefinitions,
@@ -42,8 +44,6 @@ export default function GroundView({
   onAdvancePhase,
   onAcknowledge,
   blinking,
-  emergencies,
-  onToggleEmergency,
   tab,
   onChangeTab,
   onboardData,
@@ -51,6 +51,11 @@ export default function GroundView({
   now,
   forcedLoss,
   onToggleLinkLoss,
+  cloud,
+  groundSource,
+  onChangeGroundSource,
+  onSetScenario,
+  onSetManualReadings,
 }) {
   const member = crewData[selectedAstronaut];
   // The main panel shows an astronaut only when they work in the selected environment
@@ -75,6 +80,14 @@ export default function GroundView({
         links={links}
         selectedSection={selectedSection}
         onSelectSection={onSelectSection}
+      />
+
+      <DataSourceBar
+        source={groundSource}
+        onChangeSource={onChangeGroundSource}
+        cloud={cloud}
+        total={Object.keys(crewData).length}
+        now={now}
       />
 
       <LinkStatusBar
@@ -117,8 +130,9 @@ export default function GroundView({
               links={links}
               now={now}
               blinking={blinking}
-              emergencyActive={emergencies.has(focused.id)}
-              onToggleEmergency={() => onToggleEmergency(focused.id)}
+              onboard={onboardData[focused.id]}
+              onSetScenario={onSetScenario}
+              onSetManualReadings={onSetManualReadings}
               onSelectAstronaut={onSelectAstronaut}
               onAssignTask={onAssignTask}
             />
@@ -152,8 +166,9 @@ function AstronautDetail({
   links,
   now,
   blinking,
-  emergencyActive,
-  onToggleEmergency,
+  onboard,
+  onSetScenario,
+  onSetManualReadings,
   onSelectAstronaut,
   onAssignTask,
 }) {
@@ -195,23 +210,32 @@ function AstronautDetail({
             {label}
           </button>
         ))}
-        {/* Demo only: forces a critical reading for the selected astronaut */}
-        <button
-          onClick={onToggleEmergency}
-          className={`ml-auto self-center px-2.5 py-1 text-xs rounded-md border whitespace-nowrap cursor-pointer ${
-            emergencyActive
-              ? 'border-vital-red text-vital-red'
-              : 'border-space-600 text-gray-500 hover:text-white'
-          }`}
-        >
-          {emergencyActive ? 'End emergency' : 'Simulate emergency'}
-        </button>
+        {/* Where this astronaut's readings come from right now */}
+        {member.source === 'azure' ? (
+          <span className="ml-auto self-center flex items-center gap-1.5 px-2.5 py-1 text-xs whitespace-nowrap text-vital-green">
+            <Database size={13} />
+            From device via Azure · {Math.max(0, Math.round((now - member.cloudAt) / 1000))}s ago
+          </span>
+        ) : (
+          <span className="ml-auto self-center flex items-center gap-1.5 px-2.5 py-1 text-xs whitespace-nowrap text-gray-500">
+            <Cpu size={13} />
+            Simulated
+          </span>
+        )}
       </div>
 
       {tab === 'live' && (
         <div className={`space-y-5 transition-opacity ${link.status === 'aos' ? '' : 'opacity-60'}`}>
           <VitalCards title="Key readings" metrics={primaryMetrics} size="lg" {...cardProps} />
           <VitalCards title="Other readings" metrics={otherMetrics} {...cardProps} />
+          <DemoControls
+            key={member.id}
+            member={member}
+            onboard={onboard}
+            metrics={numericMetrics}
+            onSetScenario={onSetScenario}
+            onSetManualReadings={onSetManualReadings}
+          />
         </div>
       )}
       {tab === 'history' && (

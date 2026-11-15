@@ -124,6 +124,25 @@ curl -X POST https://<your-deployment>/api/telemetry \
 To run the function locally, use `vercel dev` in `Frontend/` with the variables in a local `.env`
 file (it is ignored by git). Without them the endpoint answers `503`.
 
+```bash
+curl https://<your-deployment>/api/telemetry?minutes=10     # live records Ground reads
+```
+
+### Training sample in Cosmos DB — `Frontend/scripts/seed-training.mjs`
+
+Loads 1,500 daily records and 11 spacewalks (297 readings) from `data/simulated/` into the same
+container, tagged `origen: "entrenamiento"`. The sample is fixed (seed 42) and documents have fixed
+ids, so running it again overwrites instead of duplicating.
+
+```bash
+cd Frontend
+node scripts/seed-training.mjs --dry-run                 # counts and an example record, no key
+node --env-file=.env.local scripts/seed-training.mjs     # upload
+```
+
+The upload needs `COSMOS_ENDPOINT` and `COSMOS_KEY` in `Frontend/.env.local` (ignored by git;
+copy them from Azure Portal → Cosmos DB account → Keys).
+
 ---
 
 ## Deployment (Vercel)

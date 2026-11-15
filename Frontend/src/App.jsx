@@ -8,6 +8,7 @@ import { generateCrewData, initialAlerts, getTask } from './data/mockData';
 import { useRealtimeVitals } from './hooks/useRealtimeVitals';
 import { useDownlink } from './hooks/useDownlink';
 import { useBlackBox } from './hooks/useBlackBox';
+import { useCloudFeed } from './hooks/useCloudFeed';
 import { getCriticalReadings, criticalKey } from './utils/metrics';
 import { getAutoTheme, readThemeChoice, saveThemeChoice } from './utils/theme';
 
@@ -26,12 +27,18 @@ function App() {
     missions,
     emergencies,
     toggleEmergency,
+    setScenario,
+    setManualReadings,
     assignTask,
     planTask,
     advancePhase,
   } = useRealtimeVitals(initialData);
   // Crew sees onboard data; ground sees only what the downlink has delivered
-  const { groundData, links, now, forcedLoss, toggleLinkLoss } = useDownlink(crewData);
+  const { groundData: downlinked, links, now, forcedLoss, toggleLinkLoss } = useDownlink(crewData);
+  // Ground reads what the crew devices stored in Azure; 'simulation' is the fallback for the demo
+  const [groundSource, setGroundSource] = useState('azure');
+  const cloud = useCloudFeed(downlinked, groundSource === 'azure');
+  const groundData = cloud.data;
   const [view, setView] = useState(getViewFromHash);
   const [selectedAstronaut, setSelectedAstronaut] = useState('ast-001');
   const [selectedSection, setSelectedSection] = useState(() => initialData['ast-001'].env);
@@ -200,6 +207,11 @@ function App() {
           onboardData={crewData}
           forcedLoss={forcedLoss}
           onToggleLinkLoss={toggleLinkLoss}
+          cloud={cloud}
+          groundSource={groundSource}
+          onChangeGroundSource={setGroundSource}
+          onSetScenario={setScenario}
+          onSetManualReadings={setManualReadings}
           onAcknowledge={handleAcknowledge}
           tab={groundTab}
           onChangeTab={setGroundTab}

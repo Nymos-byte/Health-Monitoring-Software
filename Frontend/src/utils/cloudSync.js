@@ -30,6 +30,8 @@ export function makeSnapshot(member) {
     entorno: member.env,
     tarea: member.taskId,
     actividad: v.activity_level,
+    // 'Normal', or the demo situation running on the device (see data/scenarios.js)
+    evento: v.event ?? 'Normal',
     ritmo_cardiaco: v.heart_rate_bpm,
     spO2: v.spo2_pct,
     radiacion: v.cumulative_radiation_mgy,

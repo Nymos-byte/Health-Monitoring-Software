@@ -31,15 +31,29 @@ ranges):
                     Vercel function  Frontend/api/telemetry.js
                                │ (COSMOS_ENDPOINT / COSMOS_KEY, server-side only)
                                ▼
-                    Azure Cosmos DB  MisionMarte / Telemetria
+                    Azure Cosmos DB  MisionMarte / Telemetria (partition key /astronauta_id)
+                               │ GET every 5 s: live records of the last 10 min
+                               ▼
+                    useCloudFeed ── replaces the simulated ground copy of every astronaut whose
+                                    device reported in the last 2 min → Ground Control
 ```
+
+The container holds two kinds of records, told apart by `origen`:
+
+- `en_vivo`: snapshots uploaded by crew devices (the function sets it on every POST).
+- `entrenamiento`: a sample of the model's training data loaded once by
+  `Frontend/scripts/seed-training.mjs`: 1,500 daily records (all 240 critical, 360 caution,
+  900 normal) and 11 whole spacewalks (297 readings, two per EVA event plus three uneventful ones).
+  Their dates are synthetic (mission day 0 = 2026-01-01). Ground never shows them as live data.
 
 ## Front-end modules
 
 | Path | Role |
 |---|---|
 | `src/App.jsx` | Root: picks the view from the URL hash, wires the hooks together, owns alert acknowledgement and theme. |
-| `src/hooks/useRealtimeVitals.js` | Simulates telemetry for every astronaut in their current task; task assignment, planned tasks, mission phases, simulated emergencies and session records. |
+| `src/hooks/useRealtimeVitals.js` | Simulates telemetry for every astronaut in their current task: each reading settles back toward the astronaut's baseline with small sensor noise, unless a demo situation or manual readings push it away. Also task assignment, planned tasks, mission phases and session records. |
+| `src/data/scenarios.js` | Demo risk situations (one per event of the training data) and where each pushes the readings, relative to the context-adjusted limits. |
+| `src/hooks/useCloudFeed.js` | Ground's reader of Azure: polls `GET /api/telemetry` and merges the live records into the ground copy; astronauts without a reporting device stay simulated. |
 | `src/hooks/useDownlink.js` | Simulates the space-to-ground link per environment, with scheduled outages and forced link loss. Ground only sees what the link delivered. |
 | `src/hooks/useBlackBox.js` | The wearer's onboard recorder: writes a snapshot every 15 s, whatever the link, and uploads when both the network and the downlink are up. |
 | `src/utils/cloudSync.js` | Snapshot format, IndexedDB queue and batched upload to `/api/telemetry`. |
@@ -50,7 +64,8 @@ ranges):
 | `src/utils/theme.js` | Crew colour themes (Auto, Cabin, Sunlight, Night). |
 | `src/views/` | `GroundView`, `CrewView` (+ `crew/` pages) and `WristView`. |
 | `src/components/` | Panels and cards shared by the views. |
-| `api/telemetry.js` | Vercel serverless function that writes snapshots to Azure Cosmos DB. |
+| `api/telemetry.js` | Vercel serverless function that writes snapshots to Azure Cosmos DB and serves recent live ones to Ground. |
+| `scripts/seed-training.mjs` | One-off loader of the training sample into Cosmos DB (see TOOLS.md). |
 
 ## Mission model
 
@@ -78,7 +93,13 @@ Implemented in `src/data/mockData.js` and `src/utils/metrics.js`:
 3. **Combined rules.** Several readings out of range together can be an emergency even if none is
    critical alone: *Possible suit failure* (suit pressure, suit CO₂, SpO₂), *Heat stress*,
    *Possible hypoxia* and *Cardiovascular strain*. Each comes with a crew instruction.
-4. **Acknowledgement.** Ground and crew acknowledge separately. The wrist and tablet belong to the
+4. **Demo situations.** Ground → *Live* → *Risk simulation* starts a situation on the selected
+   astronaut's device (dehydration, infection, sleep deprivation, habitat hypoxia, orthostatic
+   intolerance, solar particle event; on EVA: suit CO₂ failure, suit leak, overexertion, mild
+   hypoxia; or a cardiac emergency). Readings ramp past their limits in about 15 s and settle back
+   when it ends. *Enter readings* holds typed values instead. Crew devices keep a single
+   *Simulate emergency* button (cardiac).
+5. **Acknowledgement.** Ground and crew acknowledge separately. The wrist and tablet belong to the
    same astronaut, so acknowledging on one silences both. When a reading leaves the critical zone,
    its acknowledgement is forgotten so a new episode alarms again.
 
@@ -102,7 +123,12 @@ Implemented in `src/data/mockData.js` and `src/utils/metrics.js`:
 
 ## Telemetry API
 
-`POST /api/telemetry` — body: one snapshot or an array of 1–500 snapshots.
+`GET /api/telemetry[?minutes=10]` — live records (`origen = en_vivo`) of the last 10 minutes (max
+60), newest first, at most 500: `{"records": [...]}`. `503` if not configured, `502` if the read
+fails.
+
+`POST /api/telemetry` — body: one snapshot or an array of 1–500 snapshots. Each one is stored with
+`origen: "en_vivo"`, whatever the client sends.
 
 ```json
 {
@@ -115,6 +141,7 @@ Implemented in `src/data/mockData.js` and `src/utils/metrics.js`:
   "spO2": 97.4,
   "radiacion": 71.2,
   "t_score_cadera": -0.84,
+  "evento": "Normal",
   "constantes": { "heart_rate_bpm": 132, "suit_co2_ppm": 2100, "...": 0 },
   "timestamp": "2026-11-15T12:00:00.000Z"
 }
@@ -127,7 +154,7 @@ reading under its English metric key. `astronauta_id` and `timestamp` are requir
 |---|---|
 | `201 {"stored": n}` | Stored |
 | `400` | Empty body, more than 500 items, or a missing required field |
-| `405` | Method other than POST |
+| `405` | Method other than GET or POST |
 | `503` | `COSMOS_ENDPOINT` / `COSMOS_KEY` not configured (the app shows *cloud not configured* and keeps the data onboard) |
 | `502` | Cosmos DB rejected the write |
 
@@ -135,8 +162,8 @@ Credentials live only in Vercel environment variables. The browser never sees a 
 
 ## Current limitations
 
-- The simulation runs in each browser. Ground Control reads the simulated downlink in the same
-  tab, not Azure, so two separate devices do not share data yet. Reading from Cosmos DB on the
-  Ground side is the next planned step.
+- The simulation still runs in each browser. Ground shows Azure data only for astronauts whose
+  device is uploading (the black box sends the wearer only, every 15 s); the rest stay simulated.
+  *Data → Simulation* on Ground ignores Azure entirely (fallback for the demo).
 - The app uses rule-based, context-adjusted thresholds; the trained ML models are not wired in yet.
 - Crew, missions and alerts are demo data (`src/data/mockData.js`).

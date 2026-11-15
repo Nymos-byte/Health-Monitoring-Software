@@ -685,16 +685,16 @@ function generateTimeSeries(task, memberOffset, points = 24, endAt = Date.now())
     const sample = {
       time: time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
       timestamp: time.getTime(),
-      heart_rate_bpm: Math.round(base.heart_rate_bpm + memberOffset * 2 + wave * 8 + noise(5)),
-      systolic_bp_mmhg: Math.round(base.systolic_bp_mmhg + memberOffset * 2 + wave * 6 + noise(4)),
-      diastolic_bp_mmhg: Math.round(base.diastolic_bp_mmhg + memberOffset + wave * 4 + noise(3)),
-      spo2_pct: Math.min(100, round(base.spo2_pct + slowWave * 0.5 + noise(0.5), 1)),
-      body_temp_c: round(base.body_temp_c + slowWave * 0.2 + noise(0.15), 1),
+      heart_rate_bpm: Math.round(base.heart_rate_bpm + memberOffset * 2 + wave * 3 + noise(2)),
+      systolic_bp_mmhg: Math.round(base.systolic_bp_mmhg + memberOffset * 2 + wave * 2.5 + noise(1.5)),
+      diastolic_bp_mmhg: Math.round(base.diastolic_bp_mmhg + memberOffset + wave * 1.5 + noise(1)),
+      spo2_pct: Math.min(100, round(base.spo2_pct + slowWave * 0.3 + noise(0.2), 1)),
+      body_temp_c: round(base.body_temp_c + slowWave * 0.1 + noise(0.05), 1),
       sleep_hours_prev_night: round(base.sleep_hours_prev_night + slowWave * 0.5 + noise(0.3), 1),
       hip_t_score: round(base.hip_t_score - (points - i) * 0.005 + slowWave * 0.04, 2),
       vitamin_d_ng_ml: round(base.vitamin_d_ng_ml + slowWave * 2.5 + noise(1.5), 1),
       lv_mass_g: round(base.lv_mass_g - memberOffset * 1.5 + slowWave * 2.2 + noise(1.5), 1),
-      pvt_reaction_time_ms: Math.round(base.pvt_reaction_time_ms + memberOffset * 5 + wave * 18 + noise(12)),
+      pvt_reaction_time_ms: Math.round(base.pvt_reaction_time_ms + memberOffset * 5 + wave * 8 + noise(5)),
       cumulative_radiation_mgy: Math.max(
         0,
         round(base.cumulative_radiation_mgy + (points - i) * 0.35 + memberOffset * 3, 1)
@@ -702,7 +702,7 @@ function generateTimeSeries(task, memberOffset, points = 24, endAt = Date.now())
     };
     if (task.eva) {
       sample.suit_pressure_psia = round(base.suit_pressure_psia + slowWave * 0.04 + noise(0.03), 2);
-      sample.suit_co2_ppm = Math.round(base.suit_co2_ppm + (points - i) * 35 + wave * 180 + noise(120));
+      sample.suit_co2_ppm = Math.round(base.suit_co2_ppm + (points - i) * 20 + wave * 80 + noise(40));
     }
     data.push(sample);
   }
@@ -721,13 +721,17 @@ export function buildAssignment(member, taskId, memberIndex, endAt = Date.now())
     event: 'Normal',
     ...scenarios[`${member.id}:${taskId}`],
   };
+  // The readings stay close to this baseline unless a situation pushes them away
+  const baseline = Object.fromEntries(
+    Object.entries(currentVitals).filter(([k, v]) => typeof v === 'number' && metricDefinitions[k])
+  );
   return {
     ...member,
     taskId,
     task,
     env: task.environment,
     startedAt: endAt,
-    data: { vitals: series, currentVitals },
+    data: { vitals: series, currentVitals, baseline },
   };
 }
 
