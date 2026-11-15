@@ -1,4 +1,4 @@
-import { Activity, History, Route, Globe2 } from 'lucide-react';
+import { Activity, History, Route, Globe2, Video } from 'lucide-react';
 import PhaseTabs from '../components/PhaseTabs';
 import CrewRoster from '../components/CrewRoster';
 import AlertsPanel from '../components/AlertsPanel';
@@ -7,11 +7,15 @@ import VitalCards from '../components/VitalCards';
 import HistoryPanel from '../components/HistoryPanel';
 import MissionPhases from '../components/MissionPhases';
 import EnvironmentPanel from '../components/EnvironmentPanel';
+import LinkStatusBar from '../components/LinkStatusBar';
+import BodyCamPanel from '../components/BodyCamPanel';
+import { getBufferedSamples } from '../hooks/useDownlink';
 import { SECTIONS, metricDefinitions, getVitalContext } from '../data/mockData';
 
 const TABS = [
   { id: 'live', label: 'Live', icon: Activity },
   { id: 'history', label: 'History', icon: History },
+  { id: 'camera', label: 'Body Cam', icon: Video },
   { id: 'mission', label: 'Mission Phases', icon: Route },
   { id: 'environment', label: 'Environment', icon: Globe2 },
 ];
@@ -29,6 +33,11 @@ export default function GroundView({
   onToggleEmergency,
   tab,
   onChangeTab,
+  onboardData,
+  links,
+  now,
+  forcedLoss,
+  onToggleLinkLoss,
 }) {
   const member = crewData[selectedAstronaut];
   const section = SECTIONS.find((s) => s.id === selectedSection) || SECTIONS[0];
@@ -38,6 +47,7 @@ export default function GroundView({
   const numericMetrics = section.metrics.filter((k) => !metricDefinitions[k]?.isCategorical);
   const otherMetrics = numericMetrics.filter((k) => !section.primaryMetrics.includes(k));
   const emergencyActive = emergencies.has(`${selectedAstronaut}:${selectedSection}`);
+  const link = links[selectedSection];
 
   return (
     <main className="max-w-[1600px] mx-auto px-4 py-5 space-y-5">
@@ -45,8 +55,17 @@ export default function GroundView({
         crewData={crewData}
         alerts={alerts}
         blinking={blinking}
+        links={links}
         selectedSection={selectedSection}
         onSelectSection={onSelectSection}
+      />
+
+      <LinkStatusBar
+        link={link}
+        now={now}
+        buffered={getBufferedSamples(crewData, onboardData, selectedSection)}
+        forced={forcedLoss.has(selectedSection)}
+        onToggleLinkLoss={() => onToggleLinkLoss(selectedSection)}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-5 items-start">
@@ -99,7 +118,7 @@ export default function GroundView({
           </div>
 
           {tab === 'live' && (
-            <div className="space-y-5">
+            <div className={`space-y-5 transition-opacity ${link.status === 'aos' ? '' : 'opacity-60'}`}>
               <VitalCards
                 title="Key readings"
                 metrics={section.primaryMetrics}
@@ -128,6 +147,16 @@ export default function GroundView({
               defaultMetric={section.primaryMetrics[0]}
               selectedSection={selectedSection}
               context={context}
+            />
+          )}
+          {tab === 'camera' && (
+            <BodyCamPanel
+              crewData={crewData}
+              selectedId={selectedAstronaut}
+              selectedSection={selectedSection}
+              link={link}
+              now={now}
+              onSelect={onSelectAstronaut}
             />
           )}
           {tab === 'mission' && (

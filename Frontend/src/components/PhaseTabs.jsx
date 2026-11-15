@@ -1,4 +1,4 @@
-import { Globe, Shield, Satellite, Rocket } from 'lucide-react';
+import { Globe, Shield, Satellite, Rocket, WifiOff } from 'lucide-react';
 import { SECTIONS } from '../data/mockData';
 import { getStatusColor } from '../utils/helpers';
 
@@ -11,7 +11,14 @@ const sectionIcons = {
 
 const statusRank = { nominal: 0, caution: 1, critical: 2 };
 
-export default function PhaseTabs({ crewData, alerts, blinking, selectedSection, onSelectSection }) {
+export default function PhaseTabs({
+  crewData,
+  alerts,
+  blinking,
+  links,
+  selectedSection,
+  onSelectSection,
+}) {
   const activeSec = SECTIONS.find((s) => s.id === selectedSection) || SECTIONS[0];
   const members = Object.values(crewData);
 
@@ -41,6 +48,9 @@ export default function PhaseTabs({ crewData, alerts, blinking, selectedSection,
             >
               <Icon size={16} />
               <span className="font-medium">{sec.name}</span>
+              {links[sec.id].status !== 'aos' && (
+                <WifiOff size={14} className="text-vital-orange" aria-label="No signal" />
+              )}
               <span
                 className={`w-2 h-2 rounded-full ml-auto ${hasUnacknowledgedCritical ? 'animate-ping' : ''}`}
                 style={{ backgroundColor: getStatusColor(worst) }}

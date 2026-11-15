@@ -5,6 +5,7 @@ import CrewView from './views/CrewView';
 import CriticalAlertModal from './components/CriticalAlertModal';
 import { generateCrewData, initialAlerts } from './data/mockData';
 import { useRealtimeVitals } from './hooks/useRealtimeVitals';
+import { useDownlink } from './hooks/useDownlink';
 import { getCriticalReadings, criticalKey } from './utils/metrics';
 
 // Each view has its own URL so it can be opened on a separate screen: #/ground or #/crew
@@ -15,6 +16,8 @@ function getViewFromHash() {
 function App() {
   const initialData = useMemo(() => generateCrewData(), []);
   const { crewData, emergencies, toggleEmergency } = useRealtimeVitals(initialData);
+  // Crew sees onboard data; ground sees only what the downlink has delivered
+  const { groundData, links, now, forcedLoss, toggleLinkLoss } = useDownlink(crewData);
   const [view, setView] = useState(getViewFromHash);
   const [selectedSection, setSelectedSection] = useState('space_station');
   const [selectedAstronaut, setSelectedAstronaut] = useState('ast-001');
@@ -23,11 +26,11 @@ function App() {
   // Acknowledged critical readings, kept separately for each view: "<view>|<astronaut>:<phase>:<metric>"
   const [acknowledged, setAcknowledged] = useState(() => new Set());
 
-  // Ground watches the whole crew; the crew display only the astronaut wearing it
+  // Ground watches the whole crew (as received); the crew display only the astronaut wearing it
   const criticalReadings =
     view === 'crew'
       ? getCriticalReadings(crewData, { astronautId: selectedAstronaut, sectionId: selectedSection })
-      : getCriticalReadings(crewData);
+      : getCriticalReadings(groundData);
   const unacknowledged = criticalReadings.filter((r) => !acknowledged.has(`${view}|${r.id}`));
   // Every reading involved in an unacknowledged emergency blinks
   const blinking = new Set(
@@ -36,13 +39,17 @@ function App() {
     )
   );
 
-  // Once a reading leaves the critical zone, forget its acknowledgement so a new episode alarms again
-  const allCriticalIds = getCriticalReadings(crewData).map((r) => r.id).join(',');
-  const [prevCriticalIds, setPrevCriticalIds] = useState(allCriticalIds);
-  if (allCriticalIds !== prevCriticalIds) {
-    setPrevCriticalIds(allCriticalIds);
-    const stillCritical = new Set(allCriticalIds.split(','));
-    setAcknowledged((prev) => new Set([...prev].filter((k) => stillCritical.has(k.split('|')[1]))));
+  // Once a reading leaves the critical zone (as seen by each view), forget its acknowledgement
+  // so a new episode alarms again
+  const allCriticalKeys = [
+    ...getCriticalReadings(crewData).map((r) => `crew|${r.id}`),
+    ...getCriticalReadings(groundData).map((r) => `ground|${r.id}`),
+  ].join(',');
+  const [prevCriticalKeys, setPrevCriticalKeys] = useState(allCriticalKeys);
+  if (allCriticalKeys !== prevCriticalKeys) {
+    setPrevCriticalKeys(allCriticalKeys);
+    const stillCritical = new Set(allCriticalKeys.split(','));
+    setAcknowledged((prev) => new Set([...prev].filter((k) => stillCritical.has(k))));
   }
 
   // After acknowledging, take the viewer straight to the live vitals of the astronaut in trouble
@@ -91,6 +98,12 @@ function App() {
       ) : (
         <GroundView
           {...shared}
+          crewData={groundData}
+          onboardData={crewData}
+          links={links}
+          now={now}
+          forcedLoss={forcedLoss}
+          onToggleLinkLoss={toggleLinkLoss}
           onAcknowledge={handleAcknowledge}
           tab={groundTab}
           onChangeTab={setGroundTab}

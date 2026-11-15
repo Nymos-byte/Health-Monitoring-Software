@@ -871,3 +871,42 @@ export const sectionEnvironmentData = {
     ],
   },
 };
+
+// Communication link per mission phase. Outages repeat every `period` seconds and last `outage`
+// seconds (offset so phases don't drop together). During an outage telemetry is kept in the
+// onboard store-and-forward buffer (Docker service on the vehicle) and sent when the link returns.
+// bandwidth 'high' allows live body-cam video; 'low' only allows periodic snapshots.
+export const LINK_PROFILES = {
+  earth_preflight: {
+    route: 'Ground network (fiber)',
+    bandwidth: 'high',
+    delayLabel: '< 1 s',
+    cycle: null,
+  },
+  spacecraft: {
+    route: 'Deep Space Network',
+    bandwidth: 'low',
+    delayLabel: '4.2 min one-way',
+    cycle: { period: 120, outage: 30, offset: 0 },
+  },
+  space_station: {
+    route: 'TDRS relay satellites',
+    bandwidth: 'high',
+    delayLabel: '~0.6 s',
+    cycle: { period: 90, outage: 20, offset: 40 },
+  },
+  eva_vehicle: {
+    route: 'Suit radio → ISS → TDRS',
+    bandwidth: 'low',
+    delayLabel: '~0.8 s',
+    cycle: { period: 75, outage: 15, offset: 20 },
+  },
+};
+
+// Body-cam stream URLs per astronaut (e.g. HLS/WebRTC gateway). null = show the simulated feed.
+export const bodyCamStreams = {
+  'ast-001': null,
+  'ast-002': null,
+  'ast-003': null,
+  'ast-004': null,
+};
