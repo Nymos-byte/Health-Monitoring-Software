@@ -1,111 +1,73 @@
-import {
-  Activity,
-  Thermometer,
-  Wind,
-  Radiation,
-  Brain,
-  Droplets,
-  Moon,
-  Zap,
-  Compass,
-  Bone,
-  Sun,
-  Heart,
-  Gauge,
-} from 'lucide-react';
 import { getVitalStatus, getStatusColor } from '../utils/helpers';
-import { SECTIONS, metricDefinitions, getMetricRange } from '../data/mockData';
+import { metricDefinitions, getMetricRange } from '../data/mockData';
+import { metricIcons, formatMetricValue, criticalKey, getStatusOutline } from '../utils/metrics';
 
-const metricIcons = {
-  heart_rate_bpm: Activity,
-  systolic_bp_mmhg: Activity,
-  spo2_pct: Droplets,
-  body_temp_c: Thermometer,
-  sleep_hours_prev_night: Moon,
-  activity_level: Zap,
-  flight_phase: Compass,
-  hip_t_score: Bone,
-  vitamin_d_ng_ml: Sun,
-  lv_mass_g: Heart,
-  pvt_reaction_time_ms: Brain,
-  suit_pressure_psia: Gauge,
-  suit_co2_ppm: Wind,
-  cumulative_radiation_mgy: Radiation,
-};
-
-export default function VitalCards({ vitals, selectedSection = 'space_station' }) {
-  const activeSec = SECTIONS.find((s) => s.id === selectedSection) || SECTIONS[0];
+export default function VitalCards({
+  title,
+  metrics,
+  vitals,
+  astronautId,
+  selectedSection,
+  context,
+  blinking,
+  size = 'md',
+}) {
+  if (!metrics.length) return null;
+  const large = size === 'lg';
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-      {activeSec.metrics.map((key) => {
-        const def = metricDefinitions[key];
-        if (!def) return null;
+    <div>
+      {title && (
+        <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">{title}</h3>
+      )}
+      <div
+        className={`grid gap-3 ${
+          large ? 'grid-cols-2 xl:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-5'
+        }`}
+      >
+        {metrics.map((key) => {
+          const def = metricDefinitions[key];
+          const Icon = metricIcons[key];
+          const status = getVitalStatus(key, vitals?.[key], selectedSection, context);
+          const color = getStatusColor(status);
+          const range = getMetricRange(key, selectedSection, context);
+          const outline = getStatusOutline(
+            status,
+            blinking.has(criticalKey(astronautId, selectedSection, key))
+          );
 
-        const Icon = metricIcons[key] || Activity;
-        const value = vitals?.[key];
-        const status = getVitalStatus(key, value, selectedSection);
-        const color = getStatusColor(status);
-        const range = getMetricRange(key, selectedSection);
-
-        let displayValue = '—';
-        if (value !== undefined && value !== null) {
-          if (def.isCategorical) {
-            displayValue = String(value).replace(/_/g, ' ');
-          } else if (def.secondary && vitals?.[def.secondary] !== undefined) {
-            displayValue = `${Math.round(value)}/${Math.round(vitals[def.secondary])}`;
-          } else if (typeof value === 'number') {
-            displayValue = value.toFixed(def.decimals ?? 0);
-          } else {
-            displayValue = String(value);
-          }
-        }
-
-        return (
-          <div
-            key={key}
-            className="relative bg-space-800/80 backdrop-blur border border-space-600 rounded-xl p-4 hover:border-nasa-blue/50 transition-all duration-300 group"
-          >
-            {/* Status Indicator */}
+          return (
             <div
-              className="absolute top-3 right-3 w-2 h-2 rounded-full"
-              style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }}
-            />
-
-            <div className="flex items-center gap-2 mb-2 pr-4">
-              <Icon
-                size={16}
-                style={{ color }}
-                className="opacity-70 group-hover:opacity-100 transition-opacity shrink-0"
-              />
-              <span className="text-xs text-gray-400 uppercase tracking-wider truncate">
-                {def.label}
-              </span>
-            </div>
-
-            <div className="flex items-baseline gap-1.5 flex-wrap">
-              <span
-                className={`${
-                  def.isCategorical ? 'text-lg' : 'text-2xl'
-                } font-bold font-mono tracking-tight transition-colors duration-500`}
-                style={{ color }}
-              >
-                {displayValue}
-              </span>
-              {!def.isCategorical && <span className="text-xs text-gray-500">{def.unit}</span>}
-            </div>
-
-            <div className="mt-2 flex items-center justify-between text-[10px] font-mono text-gray-500 border-t border-space-700/80 pt-1.5">
-              <span className="truncate">{def.secondary ? 'sys / dia' : key}</span>
-              {range && (
-                <span className="text-gray-400 shrink-0">
-                  {range.min}–{range.max}
+              key={key}
+              className={`bg-space-800/80 border-2 rounded-xl ${large ? 'p-4' : 'p-3'} ${outline.className}`}
+              style={outline.style}
+            >
+              <div className="flex items-center gap-2 mb-1.5 text-gray-400">
+                <Icon size={large ? 16 : 14} className="shrink-0" />
+                <span className="text-xs uppercase tracking-wider truncate">{def.label}</span>
+              </div>
+              <div className="flex items-baseline gap-1.5">
+                <span
+                  className={`${large ? 'text-3xl' : 'text-xl'} font-bold font-mono`}
+                  style={{ color: status === 'nominal' ? '#f3f4f6' : color }}
+                >
+                  {formatMetricValue(key, vitals)}
                 </span>
+                <span className="text-xs text-gray-500">{def.unit}</span>
+              </div>
+              {range && (
+                <div className="mt-1.5 flex items-center gap-1.5 text-[10px] font-mono text-gray-500">
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
+                  range {range.min}–{range.max}
+                  {range.adjustedFor && (
+                    <span className="text-vital-cyan">· {range.adjustedFor.toLowerCase()} activity</span>
+                  )}
+                </div>
               )}
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }

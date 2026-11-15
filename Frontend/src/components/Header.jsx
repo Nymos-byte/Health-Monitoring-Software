@@ -1,8 +1,12 @@
-import { Clock, Satellite, Calendar, MapPin } from 'lucide-react';
+import { Clock, Satellite, MonitorDot, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { SECTIONS } from '../data/mockData';
 
-export default function Header({ selectedSection = 'space_station' }) {
+const VIEWS = [
+  { id: 'ground', label: 'Ground Control', icon: MonitorDot },
+  { id: 'crew', label: 'Crew Display', icon: User },
+];
+
+export default function Header({ view, onChangeView }) {
   const [time, setTime] = useState(() => new Date());
 
   useEffect(() => {
@@ -11,60 +15,39 @@ export default function Header({ selectedSection = 'space_station' }) {
   }, []);
 
   const utcTime = time.toLocaleTimeString('en-US', { timeZone: 'UTC', hour12: false });
-  const activeSec = SECTIONS.find((s) => s.id === selectedSection) || SECTIONS[0];
 
   return (
     <header className="bg-space-800/90 backdrop-blur-md border-b border-space-600 sticky top-0 z-50">
-      <div className="max-w-[1920px] mx-auto px-4 py-3">
-        <div className="flex items-center justify-between">
-          {/* Left — Logo & Title */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <div className="w-10 h-10 rounded-full bg-nasa-blue flex items-center justify-center">
-                  <Satellite size={20} className="text-white" />
-                </div>
-                <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-vital-green rounded-full border-2 border-space-800 animate-pulse" />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold text-white tracking-wide">
-                  ASTRO<span className="text-nasa-blue">VITALS</span>
-                </h1>
-                <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em]">
-                  Space Health Monitoring System
-                </p>
-              </div>
-            </div>
+      <div className="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-nasa-blue flex items-center justify-center shrink-0">
+            <Satellite size={18} className="text-white" />
           </div>
+          <h1 className="hidden sm:block text-lg font-bold text-white tracking-wide">
+            ASTRO<span className="text-vital-cyan">VITALS</span>
+          </h1>
+        </div>
 
-          {/* Center — Mission Information */}
-          <div className="hidden md:flex items-center gap-6">
-            <div className="flex items-center gap-2 text-gray-400">
-              <MapPin size={14} className="text-vital-cyan" />
-              <span className="text-xs font-mono">{activeSec.location}</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-400">
-              <Calendar size={14} className="text-vital-purple" />
-              <span className="text-xs font-mono">{activeSec.missionDayLabel}</span>
-            </div>
-          </div>
+        {/* View switch */}
+        <nav className="flex p-1 bg-space-900/80 border border-space-600 rounded-xl">
+          {VIEWS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => onChangeView(id)}
+              className={`flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-lg text-sm transition-colors cursor-pointer ${
+                view === id ? 'bg-nasa-blue text-white' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <Icon size={15} />
+              <span className="hidden sm:inline">{label}</span>
+            </button>
+          ))}
+        </nav>
 
-          {/* Right — UTC Clock & Status */}
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <div className="flex items-center gap-2 text-gray-400">
-                <Clock size={14} />
-                <span className="text-sm font-mono font-bold text-white">{utcTime}</span>
-                <span className="text-[10px] text-gray-500">UTC</span>
-              </div>
-            </div>
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-vital-green/10 border border-vital-green/30 rounded-full">
-              <div className="w-1.5 h-1.5 rounded-full bg-vital-green animate-pulse" />
-              <span className="text-[10px] font-mono text-vital-green uppercase tracking-wider">
-                Systems Online
-              </span>
-            </div>
-          </div>
+        <div className="flex items-center gap-2 text-gray-400">
+          <Clock size={14} />
+          <span className="text-sm font-mono font-bold text-white">{utcTime}</span>
+          <span className="text-[10px] text-gray-500">UTC</span>
         </div>
       </div>
     </header>

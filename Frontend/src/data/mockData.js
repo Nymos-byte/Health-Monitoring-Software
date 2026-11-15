@@ -4,6 +4,8 @@
 export const SECTIONS = [
   {
     id: 'earth_preflight',
+    shortName: 'Pre-Flight',
+    primaryMetrics: ['heart_rate_bpm', 'systolic_bp_mmhg', 'sleep_hours_prev_night', 'pvt_reaction_time_ms'],
     name: 'Earth Pre-Flight',
     code: 'earth_preflight',
     subtitle: 'Baseline & Readiness',
@@ -35,16 +37,18 @@ export const SECTIONS = [
     ],
   },
   {
-    id: 'eva_vehicle',
-    name: 'EVA Vehicle',
-    code: 'eva_vehicle',
-    subtitle: 'Spacewalk & Suit Telemetry',
-    location: 'Extravehicular Mobility Unit (EMU) — EVA Sector',
-    missionDayLabel: 'Mission Day 110 • EVA #2 (195 min)',
-    defaultFlightPhase: 'EVA',
-    datasetRef: 'dataset_eva_vehicle.csv • sim_eva.csv',
+    id: 'spacecraft',
+    shortName: 'Spacecraft',
+    primaryMetrics: ['heart_rate_bpm', 'systolic_bp_mmhg', 'spo2_pct', 'body_temp_c'],
+    name: 'Spacecraft',
+    code: 'spacecraft',
+    subtitle: 'Launch, Transit & Re-Entry',
+    location: 'Orion Spacecraft — Deep Space Transit',
+    missionDayLabel: 'Mission Day 2 • Transit Phase',
+    defaultFlightPhase: 'Transit',
+    datasetRef: 'dataset_spacecraft.csv • sim_spacecraft.csv',
     description:
-      'High-frequency spacewalk monitoring (every 15 min over 6.5h): metabolic exertion, suit pressure (psia), suit CO₂ buildup (ppm), thermal load, and oxygen saturation.',
+      'Dynamic flight phase telemetry (Launch, Transit, Docking, Orbital Maneuver, Re-entry): fluid shifts, orthostatic stress, circadian disruption, PVT reaction time, and transit radiation.',
     metrics: [
       'heart_rate_bpm',
       'systolic_bp_mmhg',
@@ -52,21 +56,23 @@ export const SECTIONS = [
       'body_temp_c',
       'sleep_hours_prev_night',
       'activity_level',
-      'suit_pressure_psia',
-      'suit_co2_ppm',
+      'flight_phase',
+      'pvt_reaction_time_ms',
       'cumulative_radiation_mgy',
     ],
     chartMetrics: [
       'heart_rate_bpm',
-      'spo2_pct',
-      'suit_pressure_psia',
-      'suit_co2_ppm',
-      'body_temp_c',
       'systolic_bp_mmhg',
+      'spo2_pct',
+      'sleep_hours_prev_night',
+      'pvt_reaction_time_ms',
+      'cumulative_radiation_mgy',
     ],
   },
   {
     id: 'space_station',
+    shortName: 'Station',
+    primaryMetrics: ['heart_rate_bpm', 'spo2_pct', 'sleep_hours_prev_night', 'cumulative_radiation_mgy'],
     name: 'Space Station',
     code: 'space_station',
     subtitle: 'ISS Microgravity Habitat',
@@ -99,16 +105,18 @@ export const SECTIONS = [
     ],
   },
   {
-    id: 'spacecraft',
-    name: 'Spacecraft',
-    code: 'spacecraft',
-    subtitle: 'Launch, Transit & Re-Entry',
-    location: 'Orion Spacecraft — Deep Space Transit',
-    missionDayLabel: 'Mission Day 2 • Transit Phase',
-    defaultFlightPhase: 'Transit',
-    datasetRef: 'dataset_spacecraft.csv • sim_spacecraft.csv',
+    id: 'eva_vehicle',
+    shortName: 'EVA',
+    primaryMetrics: ['suit_pressure_psia', 'suit_co2_ppm', 'spo2_pct', 'heart_rate_bpm'],
+    name: 'EVA Vehicle',
+    code: 'eva_vehicle',
+    subtitle: 'Spacewalk & Suit Telemetry',
+    location: 'Extravehicular Mobility Unit (EMU) — EVA Sector',
+    missionDayLabel: 'Mission Day 110 • EVA #2 (195 min)',
+    defaultFlightPhase: 'EVA',
+    datasetRef: 'dataset_eva_vehicle.csv • sim_eva.csv',
     description:
-      'Dynamic flight phase telemetry (Launch, Transit, Docking, Orbital Maneuver, Re-entry): fluid shifts, orthostatic stress, circadian disruption, PVT reaction time, and transit radiation.',
+      'High-frequency spacewalk monitoring (every 15 min over 6.5h): metabolic exertion, suit pressure (psia), suit CO₂ buildup (ppm), thermal load, and oxygen saturation.',
     metrics: [
       'heart_rate_bpm',
       'systolic_bp_mmhg',
@@ -116,17 +124,17 @@ export const SECTIONS = [
       'body_temp_c',
       'sleep_hours_prev_night',
       'activity_level',
-      'flight_phase',
-      'pvt_reaction_time_ms',
+      'suit_pressure_psia',
+      'suit_co2_ppm',
       'cumulative_radiation_mgy',
     ],
     chartMetrics: [
       'heart_rate_bpm',
-      'systolic_bp_mmhg',
       'spo2_pct',
-      'sleep_hours_prev_night',
-      'pvt_reaction_time_ms',
-      'cumulative_radiation_mgy',
+      'suit_pressure_psia',
+      'suit_co2_ppm',
+      'body_temp_c',
+      'systolic_bp_mmhg',
     ],
   },
 ];
@@ -135,10 +143,10 @@ export const crewMembers = [
   {
     id: 'ast-001',
     astronautId: 'AST-01',
-    name: 'Cmdr. Elena Rodríguez',
-    role: 'Mission Commander',
+    name: 'Eng. Charlotte Hayes',
+    role: 'Flight Engineer',
     age: 42,
-    nationality: 'Mexico',
+    nationality: 'United Kingdom',
     avatar: '👩‍🚀',
     missionDays: {
       earth_preflight: -15,
@@ -151,7 +159,7 @@ export const crewMembers = [
   {
     id: 'ast-002',
     astronautId: 'AST-02',
-    name: 'Dr. James Chen',
+    name: 'Dr. Daniel Whitaker',
     role: 'Flight Surgeon',
     age: 38,
     nationality: 'United States',
@@ -167,8 +175,8 @@ export const crewMembers = [
   {
     id: 'ast-003',
     astronautId: 'AST-03',
-    name: 'Eng. Yuki Tanaka',
-    role: 'Flight Engineer',
+    name: 'Eng. Haruka Sato',
+    role: 'Mission Commander & Pilot',
     age: 35,
     nationality: 'Japan',
     avatar: '👩‍🚀',
@@ -183,7 +191,7 @@ export const crewMembers = [
   {
     id: 'ast-004',
     astronautId: 'AST-04',
-    name: 'Dr. Oleg Petrov',
+    name: 'Dr. Mikhail Orlov',
     role: 'Science Officer',
     age: 45,
     nationality: 'Russia',
@@ -375,10 +383,54 @@ export const metricDefinitions = {
   },
 };
 
-export function getMetricRange(metricKey, sectionId = 'space_station') {
+// Exertion-dependent upper limits. Heart rate uses a share of the age-predicted maximum
+// (Tanaka: HRmax = 208 - 0.7 × age); blood pressure and temperature are shifted up.
+// These are general exercise-physiology references, not validated clinical limits.
+// SpO₂, suit and radiation limits are never relaxed by activity.
+const ACTIVITY_LIMITS = {
+  Light: { hrMaxPct: 0.6, hrCriticalPct: 0.75, systolicShift: 10, tempShift: 0 },
+  Moderate: { hrMaxPct: 0.75, hrCriticalPct: 0.9, systolicShift: 20, tempShift: 0.3 },
+  Intense: { hrMaxPct: 0.9, hrCriticalPct: 0.95, systolicShift: 35, tempShift: 0.5 },
+};
+const TEMP_CRITICAL_CEILING = 39.0;
+
+// context: { activity, age } of the astronaut; without it the phase range is returned as is
+export function getMetricRange(metricKey, sectionId = 'space_station', context = {}) {
   const def = metricDefinitions[metricKey];
   if (!def || !def.ranges) return null;
-  return def.ranges[sectionId] || def.ranges.default;
+  const base = def.ranges[sectionId] || def.ranges.default;
+  const limits = ACTIVITY_LIMITS[context.activity];
+  if (!limits) return base;
+
+  // Adjusted limits never drop below the phase's own limits
+  const raise = (max, criticalHigh) => {
+    if (max <= base.max && criticalHigh <= base.criticalHigh) return base;
+    return {
+      ...base,
+      max: Math.max(base.max, max),
+      criticalHigh: Math.max(base.criticalHigh, criticalHigh),
+      adjustedFor: context.activity,
+    };
+  };
+
+  if (metricKey === 'heart_rate_bpm' && context.age) {
+    const hrMax = 208 - 0.7 * context.age;
+    return raise(Math.round(hrMax * limits.hrMaxPct), Math.round(hrMax * limits.hrCriticalPct));
+  }
+  if (metricKey === 'systolic_bp_mmhg' && limits.systolicShift) {
+    return raise(base.max + limits.systolicShift, base.criticalHigh + limits.systolicShift);
+  }
+  if (metricKey === 'body_temp_c' && limits.tempShift) {
+    return raise(
+      Math.round((base.max + limits.tempShift) * 10) / 10,
+      Math.min(TEMP_CRITICAL_CEILING, Math.round((base.criticalHigh + limits.tempShift) * 10) / 10)
+    );
+  }
+  return base;
+}
+
+export function getVitalContext(member, vitals) {
+  return { activity: vitals?.activity_level, age: member?.age };
 }
 
 // Baseline profiles per section calibrated from data/original and data/simulated
@@ -521,7 +573,7 @@ export function generateCrewData() {
         if (sec.id === 'eva_vehicle') currentVitals.activity_level = 'Light';
       }
 
-      // Eng. Yuki Tanaka (ast-003) shows caution/elevated readings across sections
+      // Eng. Haruka Sato (ast-003) shows caution/elevated readings across sections
       if (member.id === 'ast-003') {
         if (sec.id === 'earth_preflight') {
           currentVitals.heart_rate_bpm = 96;
@@ -556,7 +608,7 @@ export function generateCrewData() {
         }
       }
 
-      // Dr. Oleg Petrov (ast-004) has longer mission duration -> higher cumulative radiation & bone loss on station
+      // Dr. Mikhail Orlov (ast-004) has longer mission duration -> higher cumulative radiation & bone loss on station
       if (member.id === 'ast-004') {
         if (sec.id === 'space_station') {
           currentVitals.cumulative_radiation_mgy = 134.6;
@@ -589,7 +641,7 @@ export const initialAlerts = [
     id: 'alert-1',
     section: 'eva_vehicle',
     severity: 'critical',
-    astronaut: 'Eng. Yuki Tanaka',
+    astronaut: 'Eng. Haruka Sato',
     message: 'EVA Suit CO₂ scrubber load elevated (4,420 ppm) & suit pressure dip (4.12 psia) during EVA #2',
     timestamp: new Date(Date.now() - 600000).toISOString(),
     acknowledged: false,
@@ -598,7 +650,7 @@ export const initialAlerts = [
     id: 'alert-2',
     section: 'eva_vehicle',
     severity: 'warning',
-    astronaut: 'Eng. Yuki Tanaka',
+    astronaut: 'Eng. Haruka Sato',
     message: 'Peak metabolic exertion detected (HR 152 bpm, Temp 38.0°C) — advise 10-minute tether rest',
     timestamp: new Date(Date.now() - 1200000).toISOString(),
     acknowledged: false,
@@ -607,7 +659,7 @@ export const initialAlerts = [
     id: 'alert-3',
     section: 'space_station',
     severity: 'warning',
-    astronaut: 'Dr. Oleg Petrov',
+    astronaut: 'Dr. Mikhail Orlov',
     message: 'Cumulative radiation dose at 134.6 mGy & hip BMD T-score at -1.65 SD (Day 201 on Station)',
     timestamp: new Date(Date.now() - 2400000).toISOString(),
     acknowledged: false,
@@ -616,7 +668,7 @@ export const initialAlerts = [
     id: 'alert-4',
     section: 'space_station',
     severity: 'warning',
-    astronaut: 'Eng. Yuki Tanaka',
+    astronaut: 'Eng. Haruka Sato',
     message: 'Elevated body temperature (37.5°C) and PVT reaction delay (365 ms) — monitor for isolation stress or infection',
     timestamp: new Date(Date.now() - 3600000).toISOString(),
     acknowledged: false,
@@ -625,7 +677,7 @@ export const initialAlerts = [
     id: 'alert-5',
     section: 'spacecraft',
     severity: 'warning',
-    astronaut: 'Eng. Yuki Tanaka',
+    astronaut: 'Eng. Haruka Sato',
     message: 'Circadian misalignment in spacecraft transit: 4.9h sleep previous night, PVT reaction time 358 ms',
     timestamp: new Date(Date.now() - 5400000).toISOString(),
     acknowledged: false,
@@ -634,7 +686,7 @@ export const initialAlerts = [
     id: 'alert-6',
     section: 'spacecraft',
     severity: 'info',
-    astronaut: 'Dr. Oleg Petrov',
+    astronaut: 'Dr. Mikhail Orlov',
     message: 'Lower-body compression garments (GCG) & fluid-loading protocol verified for Re-entry phase',
     timestamp: new Date(Date.now() - 7200000).toISOString(),
     acknowledged: true,
@@ -643,7 +695,7 @@ export const initialAlerts = [
     id: 'alert-7',
     section: 'earth_preflight',
     severity: 'warning',
-    astronaut: 'Eng. Yuki Tanaka',
+    astronaut: 'Eng. Haruka Sato',
     message: 'Pre-flight Vitamin D (25-OH) at 33.8 ng/ml (optimal range: 35–90 ng/ml) — initiate 1,000 IU daily supplementation',
     timestamp: new Date(Date.now() - 9000000).toISOString(),
     acknowledged: false,
@@ -652,7 +704,7 @@ export const initialAlerts = [
     id: 'alert-8',
     section: 'earth_preflight',
     severity: 'info',
-    astronaut: 'Cmdr. Elena Rodríguez',
+    astronaut: 'Eng. Charlotte Hayes',
     message: '30-day Earth pre-flight baseline calibration completed — DXA Hip T-Score (-0.18 SD) and LV Mass (189.5 g) nominal',
     timestamp: new Date(Date.now() - 14400000).toISOString(),
     acknowledged: true,

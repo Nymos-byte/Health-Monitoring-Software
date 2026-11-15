@@ -1,11 +1,55 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { SECTIONS } from '../data/mockData';
+import { SECTIONS, getMetricRange, getVitalContext } from '../data/mockData';
 import { determineSectionStatus } from '../utils/helpers';
+
+// Simulated emergency: heart rate held above its (activity-adjusted) critical limit until cleared
+function emergencyHeartRate(sectionId, context) {
+  return getMetricRange('heart_rate_bpm', sectionId, context).criticalHigh + 5 + Math.round(Math.random() * 4);
+}
+
+function normalHeartRate(sectionId) {
+  const range = getMetricRange('heart_rate_bpm', sectionId);
+  return Math.round((range.min + range.max) / 2);
+}
 
 // Hook to simulate real-time vital sign and telemetry updates across all 4 mission sections
 export function useRealtimeVitals(initialCrewData) {
   const [crewData, setCrewData] = useState(initialCrewData);
+  const [emergencies, setEmergencies] = useState(() => new Set());
+  const emergenciesRef = useRef(emergencies);
   const intervalRef = useRef(null);
+
+  const toggleEmergency = useCallback((astronautId, sectionId) => {
+    const key = `${astronautId}:${sectionId}`;
+    const next = new Set(emergenciesRef.current);
+    const active = !next.has(key);
+    if (active) next.add(key);
+    else next.delete(key);
+    emergenciesRef.current = next;
+    setEmergencies(next);
+
+    // Apply immediately instead of waiting for the next telemetry tick
+    setCrewData((prev) => {
+      const member = prev[astronautId];
+      const secData = member.sections[sectionId];
+      const cv = {
+        ...secData.currentVitals,
+        heart_rate_bpm: active
+          ? emergencyHeartRate(sectionId, getVitalContext(member, secData.currentVitals))
+          : normalHeartRate(sectionId),
+      };
+      return {
+        ...prev,
+        [astronautId]: {
+          ...member,
+          sections: {
+            ...member.sections,
+            [sectionId]: { ...secData, currentVitals: cv, status: determineSectionStatus(cv, sectionId, member.age) },
+          },
+        },
+      };
+    });
+  }, []);
 
   const updateVitals = useCallback(() => {
     setCrewData((prev) => {
@@ -27,7 +71,9 @@ export function useRealtimeVitals(initialCrewData) {
           const hrMin = sec.id === 'eva_vehicle' ? 68 : 48;
           const hrMax = sec.id === 'eva_vehicle' ? 175 : 135;
 
-          cv.heart_rate_bpm = Math.round(clamp(cv.heart_rate_bpm + randomDelta(2), hrMin, hrMax));
+          cv.heart_rate_bpm = emergenciesRef.current.has(`${id}:${sec.id}`)
+            ? emergencyHeartRate(sec.id, getVitalContext(member, cv))
+            : Math.round(clamp(cv.heart_rate_bpm + randomDelta(2), hrMin, hrMax));
           cv.systolic_bp_mmhg = Math.round(clamp(cv.systolic_bp_mmhg + randomDelta(2), 88, 165));
           cv.diastolic_bp_mmhg = Math.round(clamp(cv.diastolic_bp_mmhg + randomDelta(1), 55, 105));
           cv.spo2_pct = clamp(Math.round((cv.spo2_pct + randomDelta(0.2)) * 10) / 10, 89.5, 100.0);
@@ -82,7 +128,7 @@ export function useRealtimeVitals(initialCrewData) {
           if (vitals.length > 50) vitals.shift();
           secData.vitals = vitals;
 
-          secData.status = determineSectionStatus(cv, sec.id);
+          secData.status = determineSectionStatus(cv, sec.id, member.age);
           member.sections[sec.id] = secData;
         });
 
@@ -98,7 +144,7 @@ export function useRealtimeVitals(initialCrewData) {
     return () => clearInterval(intervalRef.current);
   }, [updateVitals]);
 
-  return crewData;
+  return { crewData, emergencies, toggleEmergency };
 }
 
 function randomDelta(magnitude) {

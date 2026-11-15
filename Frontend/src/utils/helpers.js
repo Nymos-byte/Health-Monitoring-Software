@@ -1,6 +1,7 @@
 import { getMetricRange, SECTIONS } from '../data/mockData';
 
-export function getVitalStatus(vitalName, value, sectionId = 'space_station') {
+// context: { activity, age } so exertion-dependent limits can be applied (see getMetricRange)
+export function getVitalStatus(vitalName, value, sectionId = 'space_station', context = {}) {
   if (vitalName === 'activity_level') {
     if (value === 'Intense' && sectionId !== 'eva_vehicle') return 'caution';
     return 'nominal';
@@ -10,7 +11,7 @@ export function getVitalStatus(vitalName, value, sectionId = 'space_station') {
     return 'nominal';
   }
 
-  const range = getMetricRange(vitalName, sectionId);
+  const range = getMetricRange(vitalName, sectionId, context);
   if (!range || typeof value !== 'number') return 'nominal';
 
   if (value <= range.criticalLow || value >= range.criticalHigh) return 'critical';
@@ -18,14 +19,15 @@ export function getVitalStatus(vitalName, value, sectionId = 'space_station') {
   return 'nominal';
 }
 
-export function determineSectionStatus(vitals, sectionId) {
+export function determineSectionStatus(vitals, sectionId, age) {
   const section = SECTIONS.find((s) => s.id === sectionId) || SECTIONS[0];
+  const context = { activity: vitals.activity_level, age };
   let hasCritical = false;
   let hasCaution = false;
 
   for (const key of section.metrics) {
     if (key === 'activity_level' || key === 'flight_phase') continue;
-    const status = getVitalStatus(key, vitals[key], sectionId);
+    const status = getVitalStatus(key, vitals[key], sectionId, context);
     if (status === 'critical') hasCritical = true;
     else if (status === 'caution') hasCaution = true;
   }
@@ -35,13 +37,14 @@ export function determineSectionStatus(vitals, sectionId) {
   return 'nominal';
 }
 
-export function calculateSectionHealthScore(vitals, sectionId) {
+export function calculateSectionHealthScore(vitals, sectionId, age) {
   const section = SECTIONS.find((s) => s.id === sectionId) || SECTIONS[0];
+  const context = { activity: vitals.activity_level, age };
   let score = 100;
 
   for (const key of section.metrics) {
     if (key === 'activity_level' || key === 'flight_phase') continue;
-    const status = getVitalStatus(key, vitals[key], sectionId);
+    const status = getVitalStatus(key, vitals[key], sectionId, context);
     if (status === 'critical') score -= 18;
     else if (status === 'caution') score -= 8;
   }
@@ -54,7 +57,7 @@ export function getStatusColor(status) {
     case 'critical':
       return '#ff4444';
     case 'caution':
-      return '#ffd700';
+      return '#ff9100';
     case 'nominal':
       return '#00ff88';
     default:
@@ -67,7 +70,7 @@ export function getStatusBgClass(status) {
     case 'critical':
       return 'bg-vital-red/20 border-vital-red';
     case 'caution':
-      return 'bg-vital-yellow/20 border-vital-yellow';
+      return 'bg-vital-orange/20 border-vital-orange';
     case 'nominal':
       return 'bg-vital-green/20 border-vital-green';
     default:

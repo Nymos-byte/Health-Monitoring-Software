@@ -38,6 +38,22 @@
   animation: pulse-glow 1.5s ease-in-out infinite;
 }
 
+/* Hard on/off blink for unacknowledged critical readings */
+@keyframes blink-critical {
+  0%, 49% { border-color: #ff4444; box-shadow: 0 0 24px rgba(255, 68, 68, 0.9); }
+  50%, 100% { border-color: rgba(255, 68, 68, 0.25); box-shadow: none; }
+}
+
+.blink-critical {
+  animation: blink-critical 1s step-end infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blink-critical {
+    animation-duration: 2s;
+  }
+}
+
 /* Heartbeat line animation */
 @keyframes heartbeat-line {
   0% { opacity: 1; }
