@@ -13,6 +13,8 @@ import { getAllowedEnvironments, taskBlocker } from '../utils/missions';
 import { THEMES } from '../utils/theme';
 
 const SWIPE_PX = 40;
+// How long the stabilisation instruction stays up after acknowledging an emergency
+const INSTRUCTION_MS = 12000;
 // Labels short enough for a watch-size screen
 const WRIST_LABELS = { spo2_pct: 'SpO₂', suit_pressure_psia: 'Suit' };
 
@@ -48,6 +50,14 @@ export default function WristView({
   // The alerts screen only exists while there is something to show
   const pages = ['status', 'activity', 'crew', ...(issues.length ? ['alerts'] : [])];
   const [page, setPage] = useState('status');
+  // Shown right after OK: what to do to stabilise
+  const [instruction, setInstruction] = useState(null);
+
+  useEffect(() => {
+    if (!instruction) return;
+    const timer = setTimeout(() => setInstruction(null), INSTRUCTION_MS);
+    return () => clearTimeout(timer);
+  }, [instruction]);
   const index = Math.max(0, pages.indexOf(page));
   const go = (step) => setPage(pages[(index + step + pages.length) % pages.length]);
 
@@ -108,10 +118,13 @@ export default function WristView({
               <EmergencyScreen
                 criticals={criticals}
                 onAcknowledge={() => {
+                  setInstruction(stabiliseInstruction(criticals[0]));
                   onAcknowledgeCritical(criticals.map((c) => c.id));
                   setPage('status');
                 }}
               />
+            ) : instruction ? (
+              <InstructionScreen instruction={instruction} onDone={() => setInstruction(null)} />
             ) : (
               <>
                 {pages[index] === 'status' && (
@@ -384,5 +397,37 @@ function EmergencyScreen({ criticals, onAcknowledge }) {
         OK
       </button>
     </div>
+  );
+}
+
+// What to do right after acknowledging: the combined-rule or reading-specific advice
+function stabiliseInstruction(critical) {
+  const key = critical.metricKeys[0];
+  return {
+    title: critical.rule ? critical.rule.label : crewLabels[key],
+    text: critical.rule
+      ? critical.rule.advice
+      : getCrewAdvice(key, critical.vitals[key], critical.section.id, critical.context),
+  };
+}
+
+// Brief stabilisation instruction; closes by itself or with a tap anywhere
+function InstructionScreen({ instruction, onDone }) {
+  return (
+    <button
+      onClick={onDone}
+      className="relative h-full w-full flex flex-col justify-center gap-2 px-5 text-left bg-space-900 cursor-pointer"
+    >
+      <p className="text-[11px] font-bold tracking-wider text-vital-red">DO THIS NOW · {instruction.title}</p>
+      <p className="text-xl font-bold leading-snug text-white">{instruction.text}</p>
+      <p className="text-sm text-gray-400">Then tell Mission Control how you feel.</p>
+      {/* Time left before the screen closes on its own */}
+      <span className="absolute bottom-0 inset-x-0 h-1.5 bg-space-700">
+        <span
+          className="block h-full bg-vital-red origin-left"
+          style={{ animation: `instruction-timer ${INSTRUCTION_MS}ms linear forwards` }}
+        />
+      </span>
+    </button>
   );
 }

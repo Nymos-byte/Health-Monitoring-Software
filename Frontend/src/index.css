@@ -153,6 +153,12 @@ body {
   animation: blink-critical 1s step-end infinite;
 }
 
+/* Countdown bar for the wrist stabilisation instruction */
+@keyframes instruction-timer {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .blink-critical {
     animation-duration: 2s;
