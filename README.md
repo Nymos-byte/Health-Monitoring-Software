@@ -1,60 +1,57 @@
-# Astronaut Health Monitoring Software
+# Vital-X — Space Health Monitoring System
 
 **NASA Space Apps Challenge 2026 – Health Monitoring challenge**
 
 Long-duration missions expose astronauts to space radiation, isolation and confinement, altered
-gravity, distance from Earth and a hostile closed environment. On a Mars mission, Earth-based
-medical support can be minutes away, so crews must spot health changes themselves. This project
-builds the data and machine-learning core of a health-monitoring system that collects health
-indicators, **knows which mission context the astronaut is in**, detects risk signals early and
-avoids false alarms for changes that are expected in that context.
+gravity, distance from Earth and a hostile closed environment. On the Moon or Mars, Earth-based
+medical support can be minutes away and the link drops regularly, so crews must spot health
+changes themselves.
 
-> ⚠️ **All training data in this repository is SIMULATED.** It is generated from parameters
-> calibrated with NASA Human Research Program (HRP) publications (see [`docs/SOURCES.md`](docs/SOURCES.md)).
-> Every simulated record carries `data_origin = SIMULATED`. The models demonstrate a pipeline that is
-> ready to be retrained on real data. They are **not** validated for clinical use.
+Vital-X collects health indicators, **knows which mission context the astronaut is in**, detects
+risk signals early and avoids false alarms for changes that are expected in that context. A heart
+rate of 150 bpm is normal during a spacewalk and an alarm at rest; low SpO₂ is expected in a
+hypobaric lunar habitat; tachycardia is expected on landing day.
+
+> ⚠️ **All data in this repository is SIMULATED**, calibrated with NASA Human Research Program
+> (HRP) publications ([`docs/SOURCES.md`](docs/SOURCES.md)). Every simulated record carries
+> `data_origin = SIMULATED`. Vital-X is a prototype, **not** a validated medical device.
 
 ---
 
-## The problem: the same reading means different things in different contexts
+## What is in the system
 
-| Context | What is *expected* there (NASA source) | A context-blind system would… |
+| Part | What it does | Docs |
 |---|---|---|
-| Earth pre-flight | Personal baseline | — |
-| Spacecraft (launch, transit, reentry) | Launch/reentry stress (high HR); deep-space radiation dose higher than in low Earth orbit | alarm on every launch and reentry |
-| Space station (ISS) | Bone loss of 1–1.5% per month; 50–100 mSv per 6-month stay | — |
-| Planetary base (Moon 0.17 g, Mars 0.38 g) | Exploration habitat at 8.2 psia / 34% O₂ is mildly hypobaric, so SpO₂ is lower; orthostatic response when gravity returns | alarm on low SpO₂ every day |
-| Earth post-flight | **>80% orthostatic intolerance on landing day** after 4–6 month missions, improving after 24 h; 45-day reconditioning | alarm on the landing-day tachycardia |
-
-The system must tell these **expected adaptations** apart from real health events, such as a
-severe orthostatic intolerance that does not resolve, habitat hypoxia or an infection.
-
----
-
-## Repository structure
+| **Mission simulator** | Simulates ISS, Lunar and Mars missions through five contexts (Earth pre-flight, spacecraft, station, planetary base, Earth post-flight), with expected adaptations and real health events | [ML pipeline](docs/ML_PIPELINE.md) |
+| **Context-aware risk models** | Detect the context from vehicle telemetry and the risk level with Gradient Boosting; 0% false alarms at launch/reentry vs 16.8% for context-blind rules | [ML pipeline](docs/ML_PIPELINE.md) |
+| **Ground Control** | Web dashboard for the medical team: whole crew, live vitals, history, body cam, records, mission assignments, environment indicators | [User guide](docs/USER_GUIDE.md#ground-control-ground) |
+| **Crew Display** | Tablet for one astronaut: key readings in plain words, activity, crewmates, glove-friendly buttons, light-aware colour themes | [User guide](docs/USER_GUIDE.md#crew-display-crew) |
+| **Wrist** | Watch-size screen: one idea per screen; emergencies take over the screen and give a stabilisation instruction | [User guide](docs/USER_GUIDE.md#wrist-wrist) |
+| **Offline black box** | Records onboard without a link, syncs to the cloud (Azure Cosmos DB) in order when the link returns; installable PWA | [Architecture](docs/ARCHITECTURE.md#communication-link-and-offline-behaviour) |
 
 ```
-├── generator/
-│   ├── generate_data.py        # Mission simulator (ISS, Lunar, Mars), reproducible with a seed
-│   └── validate_data.py        # Checks the data against the NASA-calibrated expectations
-├── data/
-│   ├── simulated/              # sim_daily.csv, sim_eva.csv, parameters_sources.csv
-│   └── original/               # Earlier team CSVs (origin unverified, kept for reference)
-├── model/
-│   ├── train_models.py         # Context detector + context-aware risk models + evaluation
-│   └── trained/                # context_detector / daily_model / eva_model (.joblib)
-├── results/                    # Evaluation results (CSV)
-└── docs/
-    ├── SOURCES.md                       # Every NASA/CSA source and how to cite it
-    ├── DATA_AUDIT.md                    # Integrity audit of the original CSVs
-    └── NASA_Sources_Citation_Guide.docx # Citation guide (Word)
+ Python pipeline                              Vital-X app (browser, PWA)
+ ───────────────                              ──────────────────────────
+ generate_data.py ─► data/simulated/*.csv     simulated crew telemetry ─► Crew Display / Wrist
+ validate_data.py ─► checks vs NASA figures          │ store-and-forward downlink
+ train_models.py  ─► model/trained/*.joblib          ▼
+                     results/*.csv            Ground Control
+                                                     │ black box (IndexedDB)
+                                                     ▼
+                                              /api/telemetry (Vercel) ─► Azure Cosmos DB
 ```
-
-A column glossary is in [`data/simulated/README.md`](data/simulated/README.md).
 
 ## Quick start
 
-Requires Python 3.10+.
+**Web app** (Node.js 20+):
+
+```bash
+cd Frontend
+npm install
+npm run dev            # http://localhost:5173  →  #/ground, #/crew, #/wrist
+```
+
+**Data and models** (Python 3.10+):
 
 ```bash
 pip install -r requirements.txt
@@ -63,123 +60,63 @@ python generator/validate_data.py                             # 2. check against
 python model/train_models.py                                  # 3. evaluate and train (~7 min)
 ```
 
----
+Cloud sync is optional: without the Cosmos DB variables the app keeps the data onboard and says
+*cloud not configured*. See [`docs/TOOLS.md`](docs/TOOLS.md) for every command, option and setting.
 
-## The simulator
+## Key results (simulated data, unseen astronauts)
 
-Thirty astronauts are split evenly between three mission types:
-
-| Mission | Timeline |
-|---|---|
-| **ISS** | Earth (30 d) → launch → transit → docking → **station 150–210 d** → reentry → Earth post-flight (45 d) |
-| **Lunar** | Earth (30 d) → launch → transit 4–5 d → **lunar base 30–60 d (0.17 g)** → transit → reentry → Earth post-flight (45 d) |
-| **Mars** | Earth (30 d) → launch → **transit ~6 months** → **Mars base 60–90 d (0.38 g)** → transit ~6 months → reentry → Earth post-flight (45 d) |
-
-The Mars surface stay is shortened from the real ~500-day design reference mission to keep the
-dataset small.
-
-**Context telemetry** (what a vehicle or habitat would report): `gravity_g`, `peak_accel_g`
-(~3 g at launch, ~4 g at reentry), `cabin_pressure_psia`, `cabin_o2_pct` and the radiation dose.
-
-**Calibration from NASA documents**:
-
-| Parameter | Value | Source |
+| | Rules, context-blind | **Gradient Boosting, context-aware** |
 |---|---|---|
-| Bone loss in microgravity | 1–1.5% BMD per month | HRP Risk of Bone Changes |
-| Landing-day orthostatic intolerance | >80% after 4–6 month missions; less prevalent after 24 h | Cardio Evidence Book p25–26 |
-| Left-ventricular mass | −7.2% over 180 days (bed rest without exercise: −8% at 6 weeks) | Cardio Evidence Book p54 |
-| ISS radiation | 50–100 mSv per 6-month stay | Degen Evidence Report p11 |
-| Mars mission radiation | 300–450 mGy in total | Degen Evidence Report p5 |
-| 30-day / 1-year heart dose limits | 250 / 500 mGy-Eq | Degen Evidence Report p7 |
-| Exploration habitat atmosphere | 8.2 psia, 34% O₂ | Degen Evidence Report p32 |
-| Bone T-score bands | ≥ −1.0 pre-flight, ≥ −2.0 in-mission | OCHMO Bone Loss brief |
-| Post-flight reconditioning | 45 days, 2 h/day | OCHMO Bone Loss brief |
+| Risk F1 | 0.50 | **0.71** |
+| Critical recall | 73% | **76%** |
+| False alarms on normal days | 2.4% | **1.1%** |
+| False alarms at launch / reentry | 16.8% | **0.0%** |
 
-Validation confirms the simulator reproduces these numbers: Mars dose median 364 mGy, ISS 71 mGy,
-station bone loss 1.0–1.5%/month, landing-day HR +12 bpm, habitat SpO₂ −1.7%. Parameters still
-marked `TO BE VERIFIED` are listed in
-[`data/simulated/parameters_sources.csv`](data/simulated/parameters_sources.csv).
+Context detection from telemetry alone reaches 90%; EVA risk detection reaches F1 0.96. Details,
+ablations and limitations are in [`docs/ML_PIPELINE.md`](docs/ML_PIPELINE.md).
 
-**Labels.**
-- `expected_adaptation` marks normal context effects. These rows are labeled `Normal`.
-- `event` marks real health events: dehydration, sleep deprivation, infection, isolation stress,
-  solar particle event, habitat hypoxia and severe orthostatic intolerance (daily data); mild
-  hypoxia, CO₂ failure, overexertion and suit pressure leak (EVA data).
-- `risk_level` is 0 normal, 1 caution, 2 critical.
-- `sensor_artifact` marks missing values and motion spikes. These are edge cases that must not
-  change the result.
+## Repository structure
 
----
+```
+├── Frontend/                 # Vital-X web app (React + Vite PWA) and api/telemetry.js
+├── generator/                # Mission simulator and data validator
+├── model/                    # Training script and trained models (.joblib)
+├── data/
+│   ├── simulated/            # sim_daily.csv, sim_eva.csv, parameters_sources.csv
+│   └── original/             # Earlier team CSVs (origin unverified, kept for reference)
+├── results/                  # Evaluation tables (CSV)
+├── docs/                     # Documentation (below)
+└── Vital-X_Conversacion_y_Recursos/   # Design history and visual resources (Spanish)
+```
 
-## How the system works
+## Documentation
 
-1. **Context detector.** It infers the context from telemetry only, then applies a 3-day majority
-   vote so a single noisy day cannot flip the context.
-2. **Context features.** It adds the detected context, the days in that context, the cumulative
-   microgravity exposure and the 30-day radiation dose.
-3. **Two personal baselines.** A continuous rolling baseline (past 14 days) and a per-context
-   baseline that restarts at every transition, using the Earth pre-flight values for the first
-   days.
-4. **Risk model.** Gradient Boosting, the model selected in an earlier 7-model benchmark.
-5. **Radiation advisory.** A separate channel for a 30-day dose above 50% of the NASA heart limit.
-   It is not a health alarm.
+| Document | Content |
+|---|---|
+| [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) | How to use Ground Control, the Crew Display and the Wrist, and a demo flow |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Modules, mission model, alert logic, downlink, black box and the telemetry API |
+| [`docs/TOOLS.md`](docs/TOOLS.md) | Help for every tool: Python scripts, npm scripts, API, environment variables, deployment |
+| [`docs/ML_PIPELINE.md`](docs/ML_PIPELINE.md) | Simulator calibration, models, full results and limitations |
+| [`docs/AI_ASSISTANT.md`](docs/AI_ASSISTANT.md) | How AI (Claude) was used, and how to use it on this repository |
+| [`docs/SOURCES.md`](docs/SOURCES.md) | Every NASA/CSA source and how to cite it |
+| [`docs/DATA_AUDIT.md`](docs/DATA_AUDIT.md) | Integrity audit of the original CSVs |
+| [`docs/PITCH.md`](docs/PITCH.md) | 3-minute pitch script with demo cues (Spanish) |
+| [`data/simulated/README.md`](data/simulated/README.md) | Column glossary of the simulated data |
 
-## Results
+## Tech stack
 
-All results are tested on astronauts never seen in training (GroupKFold by astronaut), and
-averaged over 3 independent simulated populations.
-
-**Context detection (telemetry only):** 90% overall. It is 100% for Earth pre-flight, Earth
-post-flight and planetary base. The remaining errors are spacecraft days in low Earth orbit
-confused with station days, which have identical telemetry.
-
-**Daily risk detection:**
-
-| Model | Risk F1 | Critical recall | False alarms (normal days) |
-|---|---|---|---|
-| Rules, context-blind | 0.50 | 73% | 2.4% |
-| Rules, context-aware | 0.50 | 70% | 2.2% |
-| Gradient Boosting, context-blind | 0.72 ± 0.00 | 76% | 1.2% |
-| **Gradient Boosting, context-aware** ✅ | **0.71 ± 0.00** | **76%** | **1.1%** |
-| Gradient Boosting, true context (upper bound) | 0.71 ± 0.01 | 77% | 1.2% |
-
-**False alarms during expected adaptations** (the core of the problem):
-
-| Expected adaptation | Rules blind | Rules context | GB blind | **GB context** |
-|---|---|---|---|---|
-| Launch / reentry stress | **16.8%** | 1.5% | 2.4% | **0.0%** |
-| Landing orthostatic response | 3.0% | 0.8% | 4.9% | 3.6% |
-| Hypobaric habitat (planetary base) | 1.7% | 1.7% | 1.4% | 1.8% |
-| Early microgravity adaptation | 0.5% | 0.5% | 1.3% | 1.2% |
-| Post-flight reconditioning | 0.4% | 0.4% | 0.1% | 0.1% |
-
-**EVA** (station vs. lunar and Mars surface): F1 0.96. False alarms stay at or below 0.4% at every
-location, with or without the location feature.
-
-### What we learned
-
-- **Context matters most at abrupt transitions.** For rules, it cuts launch/reentry false alarms
-  from 16.8% to 1.5% and landing false alarms from 3.0% to 0.8%. For the model, it removes
-  launch/reentry false alarms and cuts landing false alarms by about a quarter.
-- **Gradual adaptations are already handled by a rolling personal baseline.** The blind model
-  re-learns "normal" within days, so contexts such as the hypobaric habitat do not need special
-  treatment. Context does not hurt overall accuracy (F1 0.71 vs 0.72).
-- **Resetting the baseline alone is a mistake.** An ablation showed it lowers F1 to 0.69. Keeping
-  both baselines restores F1 and still cuts transition false alarms.
-- **Approaching a radiation limit is not a health alarm.** It needs its own advisory channel,
-  otherwise it shows up as false alarms after solar particle events.
-- **Context detection is easy once telemetry is available**; the only confusion has no clinical
-  impact. The detected context performs about as well as the true context.
+React 19, Vite 8, Tailwind CSS 4, Recharts, Lucide icons, Dexie (IndexedDB), vite-plugin-pwa;
+Vercel serverless function with the Azure Cosmos DB SDK; Python with pandas, NumPy, SciPy and
+scikit-learn.
 
 ## Limitations
 
-- These results measure how well the models learn the simulator's patterns, **not real-world
-  clinical performance**.
-- Expected adaptations follow average values from NASA documents. Real individual responses vary
-  more.
-- Parameters marked `TO BE VERIFIED` still need a citation.
-- The models need validation on real astronaut or analog data (bed rest, HERA) before any
-  operational use.
+- Results measure how well the models learn the simulator's patterns, not real clinical
+  performance. Validation on real astronaut or analog data (bed rest, HERA) is needed first.
+- The web app uses context- and activity-adjusted thresholds; the trained models are not wired in
+  yet.
+- The simulation runs in each browser, so separate devices do not share data yet. Ground Control
+  reading from Azure is the next step.
 
 ## Sources
 

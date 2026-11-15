@@ -1,16 +1,46 @@
-# React + Vite
+# Vital-X web app
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + Vite progressive web app with three views — **Ground Control** (`#/ground`), **Crew
+Display** (`#/crew`) and **Wrist** (`#/wrist`) — plus one Vercel serverless function
+(`api/telemetry.js`) that stores the onboard black box in Azure Cosmos DB.
 
-Currently, two official plugins are available:
+## Run
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev        # development server, http://localhost:5173
+npm run lint       # Oxlint
+npm run build      # production build with the service worker (dist/)
+npm run preview    # serve the build; use it to test offline mode
+```
 
-## React Compiler
+## Layout
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```
+api/telemetry.js        POST /api/telemetry → Azure Cosmos DB (credentials from env vars)
+src/App.jsx             View routing (URL hash), alert acknowledgement, theme
+src/hooks/              useRealtimeVitals (simulation), useDownlink (link + store-and-forward),
+                        useBlackBox (onboard recording and upload)
+src/data/               mockData.js (environments, tasks, missions, crew, ranges, rules),
+                        offlineDB.js (IndexedDB schema)
+src/utils/              cloudSync, metrics (confirmed criticals), missions, theme, helpers
+src/views/              GroundView, CrewView (+ crew/ pages), WristView
+src/components/         Panels and cards
+```
 
-## Expanding the Oxlint configuration
+## Environment variables (Vercel)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+| Variable | Required | Default |
+|---|---|---|
+| `COSMOS_ENDPOINT` | Yes | — |
+| `COSMOS_KEY` | Yes | — |
+| `COSMOS_DATABASE` | No | `MisionMarte` |
+| `COSMOS_CONTAINER` | No | `Telemetria` |
+
+Without them `/api/telemetry` returns `503` and the app keeps the data onboard.
+
+## More
+
+- [User guide](../docs/USER_GUIDE.md)
+- [Architecture, alert logic and API](../docs/ARCHITECTURE.md)
+- [Tools reference and deployment](../docs/TOOLS.md)
