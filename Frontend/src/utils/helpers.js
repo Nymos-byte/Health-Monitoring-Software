@@ -53,13 +53,13 @@ export function calculateHealthScore(member, vitals = member.data.currentVitals)
 export function getStatusColor(status) {
   switch (status) {
     case 'critical':
-      return '#ff4444';
+      return 'var(--color-vital-red)';
     case 'caution':
-      return '#ff9100';
+      return 'var(--color-vital-orange)';
     case 'nominal':
-      return '#00ff88';
+      return 'var(--color-vital-green)';
     default:
-      return '#00ff88';
+      return 'var(--color-vital-green)';
   }
 }
 
@@ -109,4 +109,11 @@ export function formatDuration(ms) {
   const hours = Math.floor(minutes / 60);
   if (hours < 48) return minutes % 60 && hours < 10 ? `${hours} h ${minutes % 60} min` : `${hours} h`;
   return `${Math.round(hours / 24)} days`;
+}
+
+// SVG attributes (e.g. in charts) can't read CSS variables, so resolve a theme token to its value
+export function resolveColor(value) {
+  const match = /^var\((--[\w-]+)\)$/.exec(value);
+  if (!match) return value;
+  return getComputedStyle(document.documentElement).getPropertyValue(match[1]).trim() || value;
 }

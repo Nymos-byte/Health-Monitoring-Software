@@ -71,7 +71,7 @@ export default function EmptyEnvironment({
               <button
                 onClick={() => onAssignTask(astronautId, taskId)}
                 disabled={!taskId || !canAssignTask(records, missions, current, taskId)}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-nasa-blue enabled:hover:bg-nasa-blue/80 text-white enabled:cursor-pointer disabled:opacity-40"
+                className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-nasa-blue enabled:hover:bg-nasa-blue/80 text-on-accent enabled:cursor-pointer disabled:opacity-40"
               >
                 <UserPlus size={15} />
                 Assign

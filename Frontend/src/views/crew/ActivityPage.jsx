@@ -110,7 +110,7 @@ export default function ActivityPage({ member, crewData, records, missions, now,
                   onAssignTask(member.id, pending);
                   setPending(null);
                 }}
-                className="flex items-center justify-center gap-2 min-h-[60px] rounded-xl bg-nasa-blue hover:bg-nasa-blue/80 text-white text-lg font-semibold cursor-pointer"
+                className="flex items-center justify-center gap-2 min-h-[60px] rounded-xl bg-nasa-blue hover:bg-nasa-blue/80 text-on-accent text-lg font-semibold cursor-pointer"
               >
                 <Play size={22} /> Start now
               </button>

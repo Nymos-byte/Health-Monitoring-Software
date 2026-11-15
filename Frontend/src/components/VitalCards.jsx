@@ -49,7 +49,7 @@ export default function VitalCards({
               <div className="flex items-baseline gap-1.5">
                 <span
                   className={`${large ? 'text-3xl' : 'text-xl'} font-bold font-mono`}
-                  style={{ color: status === 'nominal' ? '#f3f4f6' : color }}
+                  style={{ color: status === 'nominal' ? 'var(--color-white)' : color }}
                 >
                   {formatMetricValue(key, vitals)}
                 </span>

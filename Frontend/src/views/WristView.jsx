@@ -10,6 +10,7 @@ import {
 import { getVitalStatus, getStatusColor, getMemberStatus, formatDuration } from '../utils/helpers';
 import { crewLabels, crewStatusLabel, formatMetricValue, getCrewAdvice } from '../utils/metrics';
 import { getAllowedEnvironments, taskBlocker } from '../utils/missions';
+import { THEMES } from '../utils/theme';
 
 const SWIPE_PX = 40;
 // Labels short enough for a watch-size screen
@@ -32,6 +33,8 @@ export default function WristView({
   criticals,
   onAcknowledgeCritical,
   onChangeView,
+  themeChoice,
+  onThemeChoice,
 }) {
   const member = crewData[selectedAstronaut];
   const vitals = member.data.currentVitals;
@@ -88,16 +91,16 @@ export default function WristView({
     <main className="min-h-[100dvh] flex flex-col items-center justify-center gap-8 px-4 py-8">
       {/* Watch body */}
       <div className="relative">
-        <div className="absolute left-1/2 -translate-x-1/2 -top-16 w-40 h-20 rounded-t-3xl bg-zinc-800" />
-        <div className="absolute left-1/2 -translate-x-1/2 -bottom-16 w-40 h-20 rounded-b-3xl bg-zinc-800" />
+        <div className="absolute left-1/2 -translate-x-1/2 -top-16 w-40 h-20 rounded-t-3xl bg-[#2a2c2f]" />
+        <div className="absolute left-1/2 -translate-x-1/2 -bottom-16 w-40 h-20 rounded-b-3xl bg-[#2a2c2f]" />
         <button
           onClick={() => go(1)}
-          className="absolute -right-3 top-20 w-3 h-14 rounded-r-lg bg-zinc-500 hover:bg-zinc-400 cursor-pointer"
+          className="absolute -right-3 top-20 w-3 h-14 rounded-r-lg bg-[#5c6066] hover:bg-[#767a80] cursor-pointer"
           aria-label="Side button: next screen"
         />
-        <div className="relative p-[6px] rounded-[58px] bg-zinc-700 shadow-2xl shadow-black">
+        <div className="relative p-[6px] rounded-[58px] bg-[#3a3d41] shadow-2xl shadow-black/60">
           <div
-            className="relative w-[220px] h-[268px] rounded-[52px] overflow-hidden bg-black select-none touch-pan-y"
+            className="relative w-[220px] h-[268px] rounded-[52px] overflow-hidden bg-space-900 select-none touch-pan-y"
             onPointerDown={onPointerDown}
             onPointerUp={onPointerUp}
           >
@@ -135,7 +138,7 @@ export default function WristView({
                     <span
                       key={p}
                       className={`w-1.5 h-1.5 rounded-full ${
-                        i === index ? (p === 'alerts' ? 'bg-vital-orange' : 'bg-white') : 'bg-zinc-600'
+                        i === index ? (p === 'alerts' ? 'bg-vital-orange' : 'bg-white') : 'bg-space-500'
                       }`}
                     />
                   ))}
@@ -156,6 +159,15 @@ export default function WristView({
         >
           {Object.values(crewData).map((m) => (
             <option key={m.id} value={m.id}>Worn by {m.name}</option>
+          ))}
+        </select>
+        <select
+          value={themeChoice}
+          onChange={(e) => onThemeChoice(e.target.value)}
+          className="w-full bg-space-800 border border-space-600 rounded-lg px-3 py-2 text-gray-200"
+        >
+          {THEMES.map((t) => (
+            <option key={t.id} value={t.id}>Colours: {t.label} — {t.hint}</option>
           ))}
         </select>
         <div className="grid grid-cols-3 gap-2">
@@ -196,19 +208,19 @@ function StatusScreen({ member, vitals, context, issues, link }) {
 
   return (
     <div className="h-full flex flex-col items-center pt-5">
-      <div className="flex items-center gap-1.5 text-[11px]" style={{ color: link.status === 'aos' ? '#00ff88' : '#ff9100' }}>
+      <div className="flex items-center gap-1.5 text-[11px]" style={{ color: link.status === 'aos' ? 'var(--color-vital-green)' : 'var(--color-vital-orange)' }}>
         {link.status === 'aos' ? <SatelliteDish size={12} /> : <WifiOff size={12} />}
         {link.status === 'aos' ? 'Sending' : 'Saved onboard'}
       </div>
       <div className="relative mt-1">
         <svg width="136" height="136" viewBox="0 0 136 136" className="-rotate-90">
-          <circle cx="68" cy="68" r={r} fill="none" stroke="#1f2937" strokeWidth="10" />
+          <circle cx="68" cy="68" r={r} fill="none" style={{ stroke: 'var(--color-space-700)' }} strokeWidth="10" />
           <circle
             cx="68"
             cy="68"
             r={r}
             fill="none"
-            stroke={color}
+            style={{ stroke: color }}
             strokeWidth="10"
             strokeLinecap="round"
             strokeDasharray={circumference}
@@ -220,7 +232,7 @@ function StatusScreen({ member, vitals, context, issues, link }) {
           <span className="text-xs text-gray-400">bpm</span>
         </div>
       </div>
-      <p className="mt-1 text-lg font-mono" style={{ color: secondStatus === 'nominal' ? '#e5e7eb' : getStatusColor(secondStatus) }}>
+      <p className="mt-1 text-lg font-mono" style={{ color: secondStatus === 'nominal' ? 'var(--color-white)' : getStatusColor(secondStatus) }}>
         {WRIST_LABELS[second]} {formatMetricValue(second, vitals)}
         <span className="text-xs text-gray-500 ml-1">{metricDefinitions[second].unit}</span>
       </p>
@@ -258,7 +270,7 @@ function ActivityScreen({ member, records, missions, now, onAssignTask, onPlanTa
                 setChoice(t.id);
                 setStep('confirm');
               }}
-              className="w-full min-h-[52px] px-3 rounded-2xl bg-zinc-800 text-left text-base leading-tight cursor-pointer active:bg-zinc-700"
+              className="w-full min-h-[52px] px-3 rounded-2xl bg-space-700 text-left text-base leading-tight cursor-pointer active:bg-space-600"
             >
               {t.name}
             </button>
@@ -274,7 +286,7 @@ function ActivityScreen({ member, records, missions, now, onAssignTask, onPlanTa
         <p className="text-center text-base leading-tight mb-1">{getTask(choice).name}</p>
         <button
           onClick={() => onAssignTask(member.id, choice)}
-          className="flex items-center justify-center gap-2 h-14 rounded-2xl bg-nasa-blue text-lg font-semibold cursor-pointer"
+          className="flex items-center justify-center gap-2 h-14 rounded-2xl bg-nasa-blue text-on-accent text-lg font-semibold cursor-pointer"
         >
           <Play size={20} /> Start
         </button>
@@ -283,7 +295,7 @@ function ActivityScreen({ member, records, missions, now, onAssignTask, onPlanTa
             onPlanTask(member.id, choice);
             setStep('now');
           }}
-          className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-zinc-800 text-base cursor-pointer"
+          className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-space-700 text-base cursor-pointer"
         >
           <CalendarClock size={18} /> Next
         </button>
@@ -302,7 +314,7 @@ function ActivityScreen({ member, records, missions, now, onAssignTask, onPlanTa
       {planned && <p className="mt-1 text-sm text-gray-300 truncate">Next: {planned.name}</p>}
       <button
         onClick={() => setStep('pick')}
-        className="mt-auto h-12 rounded-2xl bg-zinc-800 text-base font-semibold cursor-pointer active:bg-zinc-700"
+        className="mt-auto h-12 rounded-2xl bg-space-700 text-base font-semibold cursor-pointer active:bg-space-600"
       >
         Change
       </button>
@@ -324,7 +336,7 @@ function CrewScreen({ member, crewData }) {
         {crewmates.map((m) => {
           const status = getMemberStatus(m);
           return (
-            <div key={m.id} className="flex items-center gap-2 min-h-[44px] px-3 rounded-2xl bg-zinc-900">
+            <div key={m.id} className="flex items-center gap-2 min-h-[44px] px-3 rounded-2xl bg-space-800">
               <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: getStatusColor(status) }} />
               <span className="flex-1 truncate text-base">{m.name.replace(/^(Dr|Eng)\. /, '').split(' ')[0]}</span>
               <span className="font-mono text-lg">{formatMetricValue('heart_rate_bpm', m.data.currentVitals)}</span>
@@ -359,7 +371,7 @@ function EmergencyScreen({ criticals, onAcknowledge }) {
   const label = first.rule ? first.rule.label : `${crewLabels[key]} ${formatMetricValue(key, first.vitals)}`;
 
   return (
-    <div className="h-full flex flex-col bg-vital-red">
+    <div className="h-full flex flex-col bg-vital-red text-on-accent">
       <div className="flex-1 flex flex-col items-center justify-center px-4 text-center animate-pulse">
         <Siren size={34} />
         <p className="text-2xl font-black tracking-wide">ALERT</p>

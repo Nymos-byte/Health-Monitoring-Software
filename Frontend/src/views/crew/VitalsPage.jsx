@@ -63,7 +63,10 @@ function StatusBanner({ issues, rules, vitals, sectionId, context }) {
   return (
     <div
       className={`px-4 py-3 rounded-2xl border ${top === 'critical' ? 'pulse-critical' : ''}`}
-      style={{ backgroundColor: `${color}1a`, borderColor: `${color}80` }}
+      style={{
+        backgroundColor: `color-mix(in srgb, ${color} 10%, transparent)`,
+        borderColor: `color-mix(in srgb, ${color} 50%, transparent)`,
+      }}
     >
       <p className="flex items-center gap-3 text-xl font-bold mb-2" style={{ color }}>
         <Icon size={30} className="shrink-0" />
@@ -104,7 +107,7 @@ export function ReadingRow({ metricKey, vitals, sectionId, context, blinking = f
         {crewLabels[metricKey]}
       </span>
       <span className="font-mono text-lg">
-        <span style={{ color: status === 'nominal' ? '#f3f4f6' : color }}>
+        <span style={{ color: status === 'nominal' ? 'var(--color-white)' : color }}>
           {formatMetricValue(metricKey, vitals)}
         </span>
         <span className="text-gray-500 text-sm ml-1">{def.unit}</span>

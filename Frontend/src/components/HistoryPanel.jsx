@@ -10,7 +10,7 @@ import {
   ReferenceArea,
 } from 'recharts';
 import { metricDefinitions, getMetricRange } from '../data/mockData';
-import { getVitalStatus, getStatusColor } from '../utils/helpers';
+import { getVitalStatus, getStatusColor, resolveColor } from '../utils/helpers';
 
 function summarize(vitals, key, sectionId, context) {
   const values = vitals.map((v) => v[key]).filter((v) => typeof v === 'number');
@@ -31,7 +31,11 @@ export default function HistoryPanel({ vitals, metrics, defaultMetric, selectedS
   const active = metrics.includes(picked) ? picked : defaultMetric;
   const def = metricDefinitions[active];
   const range = getMetricRange(active, selectedSection, context);
-  const color = def.color;
+  const color = resolveColor(def.color);
+  const grid = resolveColor('var(--color-space-700)');
+  const axis = resolveColor('var(--color-space-600)');
+  const tick = resolveColor('var(--color-gray-500)');
+  const normalBand = resolveColor('var(--color-vital-green)');
   const from = vitals[0]?.time;
   const to = vitals[vitals.length - 1]?.time;
 
@@ -52,31 +56,32 @@ export default function HistoryPanel({ vitals, metrics, defaultMetric, selectedS
                 <stop offset="95%" stopColor={color} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1a2332" />
+            <CartesianGrid strokeDasharray="3 3" stroke={grid} />
             <XAxis
               dataKey="time"
-              tick={{ fill: '#6b7280', fontSize: 10 }}
-              axisLine={{ stroke: '#243044' }}
+              tick={{ fill: tick, fontSize: 10 }}
+              axisLine={{ stroke: axis }}
               tickLine={false}
               minTickGap={30}
             />
             <YAxis
-              tick={{ fill: '#6b7280', fontSize: 10 }}
-              axisLine={{ stroke: '#243044' }}
+              tick={{ fill: tick, fontSize: 10 }}
+              axisLine={{ stroke: axis }}
               tickLine={false}
               domain={['auto', 'auto']}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#111827',
-                border: '1px solid #2d3d56',
+                backgroundColor: 'var(--color-space-800)',
+                border: '1px solid var(--color-space-500)',
+                color: 'var(--color-white)',
                 borderRadius: '8px',
                 fontSize: '12px',
               }}
               formatter={(v) => [`${v} ${def.unit}`, def.label]}
             />
             {range && (
-              <ReferenceArea y1={range.min} y2={range.max} fill="#00ff88" fillOpacity={0.08} />
+              <ReferenceArea y1={range.min} y2={range.max} fill={normalBand} fillOpacity={0.08} />
             )}
             <Area
               type="monotone"

@@ -35,7 +35,7 @@ export default function Header({ view, onChangeView }) {
               key={id}
               onClick={() => onChangeView(id)}
               className={`flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-lg text-sm transition-colors cursor-pointer ${
-                view === id ? 'bg-nasa-blue text-white' : 'text-gray-400 hover:text-white'
+                view === id ? 'bg-nasa-blue text-on-accent' : 'text-gray-400 hover:text-white'
               }`}
             >
               <Icon size={15} />

@@ -51,6 +51,9 @@ export default function CrewView({
   page,
   onChangePage,
   onChangeView,
+  themeChoice,
+  theme,
+  onThemeChoice,
 }) {
   const [textSize, setTextSize] = useState(readTextSize);
   const member = crewData[selectedAstronaut];
@@ -172,6 +175,9 @@ export default function CrewView({
               emergencyActive={emergencies.has(member.id)}
               onToggleEmergency={() => onToggleEmergency(member.id)}
               onChangeView={onChangeView}
+              themeChoice={themeChoice}
+              theme={theme}
+              onThemeChoice={onThemeChoice}
             />
           )}
         </main>

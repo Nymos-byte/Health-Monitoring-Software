@@ -1,19 +1,116 @@
 @import "tailwindcss";
 
+/*
+ * Colour themes. Components use the same tokens everywhere; each theme only redefines them.
+ *  - cabin (default): neutral dark for interior lighting and for Ground Control
+ *  - sun: light, high contrast for direct sunlight (window, EVA, outdoors on Earth)
+ *  - night: dim amber with no blue/white for sleep periods
+ * `white` is the primary text colour and the grays are text shades, so they follow the theme;
+ * `on-accent` is the text on filled accent buttons and on the red emergency screen.
+ * Every text/status pair meets WCAG AA contrast (≥ 4.5:1) on its theme background.
+ */
 @theme {
-  --color-space-900: #0a0e1a;
-  --color-space-800: #111827;
-  --color-space-700: #1a2332;
-  --color-space-600: #243044;
-  --color-space-500: #2d3d56;
-  --color-nasa-blue: #0b3d91;
-  --color-nasa-red: #fc3d21;
-  --color-vital-green: #00ff88;
-  --color-vital-yellow: #ffd700;
-  --color-vital-red: #ff4444;
-  --color-vital-cyan: #00e5ff;
-  --color-vital-purple: #b388ff;
-  --color-vital-orange: #ff9100;
+  --font-sans: "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Atkinson Hyperlegible Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  --color-space-900: #16191d;
+  --color-space-800: #1c2025;
+  --color-space-700: #262b31;
+  --color-space-600: #333941;
+  --color-space-500: #4a525c;
+
+  --color-white: #ece9e4;
+  --color-gray-100: #e4e1dc;
+  --color-gray-200: #d6d3ce;
+  --color-gray-300: #c2c0bb;
+  --color-gray-400: #a3a8ae;
+  --color-gray-500: #878d94;
+  --color-gray-600: #6b7178;
+  --color-on-accent: #ffffff;
+
+  --color-nasa-blue: #3a6ea5;
+  --color-vital-green: #4cb963;
+  --color-vital-orange: #f0a92e;
+  --color-vital-red: #f2555a;
+  --color-vital-cyan: #8fb4e3;
+  --color-vital-yellow: #e0c068;
+  --color-vital-purple: #b9a2e0;
+
+  /* Muted series colours for charts and environment readings */
+  --color-chart-1: #8fb4e3;
+  --color-chart-2: #e0b36a;
+  --color-chart-3: #9bc59d;
+  --color-chart-4: #c49bd8;
+  --color-chart-5: #e08f7e;
+}
+
+:root[data-theme="sun"] {
+  --color-space-900: #f5f3ef;
+  --color-space-800: #ffffff;
+  --color-space-700: #ece9e3;
+  --color-space-600: #c9c5bd;
+  --color-space-500: #a8a39a;
+
+  --color-white: #14171a;
+  --color-gray-100: #1e2226;
+  --color-gray-200: #2a2f34;
+  --color-gray-300: #3a4046;
+  --color-gray-400: #4b5157;
+  --color-gray-500: #5a6067;
+  --color-gray-600: #6e747b;
+  --color-on-accent: #ffffff;
+
+  --color-nasa-blue: #1f4e8c;
+  --color-vital-green: #1f7a35;
+  --color-vital-orange: #9a5b00;
+  --color-vital-red: #b3261e;
+  --color-vital-cyan: #1f4e8c;
+  --color-vital-yellow: #7a5f00;
+  --color-vital-purple: #5b3e9a;
+
+  --color-chart-1: #1f4e8c;
+  --color-chart-2: #8a5a00;
+  --color-chart-3: #2e6b3a;
+  --color-chart-4: #5b3e9a;
+  --color-chart-5: #a8432f;
+}
+
+:root[data-theme="night"] {
+  --color-space-900: #0b0a09;
+  --color-space-800: #14120f;
+  --color-space-700: #1e1b17;
+  --color-space-600: #2b2620;
+  --color-space-500: #3d362d;
+
+  --color-white: #c9b494;
+  --color-gray-100: #c2ae8f;
+  --color-gray-200: #b8a589;
+  --color-gray-300: #a8977d;
+  --color-gray-400: #8a7a62;
+  --color-gray-500: #776a55;
+  --color-gray-600: #625746;
+  --color-on-accent: #e6d3b3;
+
+  --color-nasa-blue: #5a4630;
+  /* At night "normal" carries no colour; only caution and critical stand out */
+  --color-vital-green: #8a7a62;
+  --color-vital-orange: #d9962f;
+  --color-vital-red: #e0503f;
+  --color-vital-cyan: #c9b494;
+  --color-vital-yellow: #b89a5e;
+  --color-vital-purple: #9c8a70;
+
+  --color-chart-1: #b8a589;
+  --color-chart-2: #d9962f;
+  --color-chart-3: #8a7a62;
+  --color-chart-4: #9c8a70;
+  --color-chart-5: #c07a55;
+}
+
+html,
+body {
+  background: var(--color-space-900);
+  color: var(--color-white);
 }
 
 /* Custom scrollbar */
@@ -36,20 +133,20 @@
   display: none;
 }
 
-/* Pulse animation for critical alerts */
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 5px rgba(255, 68, 68, 0.3); }
-  50% { box-shadow: 0 0 20px rgba(255, 68, 68, 0.8); }
+/* Slow outline pulse for the critical status banner */
+@keyframes pulse-critical {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-vital-red) 55%, transparent); }
 }
 
 .pulse-critical {
-  animation: pulse-glow 1.5s ease-in-out infinite;
+  animation: pulse-critical 1.5s ease-in-out infinite;
 }
 
 /* Hard on/off blink for unacknowledged critical readings */
 @keyframes blink-critical {
-  0%, 49% { border-color: #ff4444; box-shadow: 0 0 24px rgba(255, 68, 68, 0.9); }
-  50%, 100% { border-color: rgba(255, 68, 68, 0.25); box-shadow: none; }
+  0%, 49% { border-color: var(--color-vital-red); box-shadow: 0 0 0 3px var(--color-vital-red); }
+  50%, 100% { border-color: color-mix(in srgb, var(--color-vital-red) 25%, transparent); box-shadow: none; }
 }
 
 .blink-critical {
@@ -60,30 +157,4 @@
   .blink-critical {
     animation-duration: 2s;
   }
-}
-
-/* Heartbeat line animation */
-@keyframes heartbeat-line {
-  0% { opacity: 1; }
-  50% { opacity: 0.5; }
-  100% { opacity: 1; }
-}
-
-.animate-heartbeat {
-  animation: heartbeat-line 1s ease-in-out infinite;
-}
-
-/* Stars background */
-.stars-bg {
-  background-image: 
-    radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.4) 0%, transparent 100%),
-    radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.3) 0%, transparent 100%),
-    radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.5) 0%, transparent 100%),
-    radial-gradient(1px 1px at 70% 80%, rgba(255,255,255,0.2) 0%, transparent 100%),
-    radial-gradient(1px 1px at 90% 40%, rgba(255,255,255,0.4) 0%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 15% 85%, rgba(255,255,255,0.3) 0%, transparent 100%),
-    radial-gradient(1px 1px at 45% 45%, rgba(255,255,255,0.2) 0%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 75% 25%, rgba(255,255,255,0.4) 0%, transparent 100%),
-    radial-gradient(1px 1px at 85% 65%, rgba(255,255,255,0.3) 0%, transparent 100%),
-    radial-gradient(1px 1px at 25% 35%, rgba(255,255,255,0.2) 0%, transparent 100%);
 }

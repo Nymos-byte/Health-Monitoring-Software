@@ -61,7 +61,7 @@ export default function EnvironmentPanel({ selectedSection = 'space_station' }) 
               className="h-full rounded-full transition-all duration-1000"
               style={{
                 width: `${pct}%`,
-                background: 'linear-gradient(90deg, #b388ff, #ff9100)',
+                background: 'linear-gradient(90deg, var(--color-chart-4), var(--color-chart-2))',
               }}
             />
           </div>

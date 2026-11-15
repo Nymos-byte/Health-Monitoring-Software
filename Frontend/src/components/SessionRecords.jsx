@@ -73,7 +73,7 @@ export default function SessionRecords({ records, crewData, title }) {
                   {getTaskPrimaryMetrics(member.task).map((key) => {
                     const status = getVitalStatus(key, vitals[key], member.env, context);
                     return (
-                      <span key={key} style={{ color: status === 'nominal' ? '#d1d5db' : getStatusColor(status) }}>
+                      <span key={key} style={{ color: status === 'nominal' ? 'var(--color-gray-300)' : getStatusColor(status) }}>
                         {metricDefinitions[key].label.split(' (')[0]} {formatMetricValue(key, vitals)}
                       </span>
                     );

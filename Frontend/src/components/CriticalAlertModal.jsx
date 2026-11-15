@@ -61,7 +61,7 @@ export default function CriticalAlertModal({ readings, audience, onAcknowledge }
 
         <button
           onClick={() => onAcknowledge(readings.map((r) => r.id))}
-          className="w-full py-4 rounded-xl text-lg font-bold transition-colors bg-vital-red text-white hover:bg-red-500 cursor-pointer"
+          className="w-full py-4 rounded-xl text-lg font-bold transition-colors bg-vital-red text-on-accent hover:bg-vital-red/85 cursor-pointer"
         >
           Acknowledge and view vital signs
         </button>

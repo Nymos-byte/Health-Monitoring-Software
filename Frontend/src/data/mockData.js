@@ -281,7 +281,7 @@ export const metricDefinitions = {
     chartLabel: 'Heart Rate (bpm)',
     unit: 'bpm',
     decimals: 0,
-    color: '#ff4444',
+    color: 'var(--color-chart-5)',
     ranges: {
       default: { min: 55, max: 100, criticalLow: 45, criticalHigh: 120 },
       earth_preflight: { min: 52, max: 95, criticalLow: 45, criticalHigh: 115 },
@@ -298,7 +298,7 @@ export const metricDefinitions = {
     chartLabel: 'Systolic Blood Pressure (mmHg)',
     unit: 'mmHg',
     decimals: 0,
-    color: '#ff9100',
+    color: 'var(--color-chart-2)',
     ranges: {
       default: { min: 95, max: 135, criticalLow: 85, criticalHigh: 150 },
       // Orthostatic intolerance after landing: low pressure is the main risk
@@ -312,7 +312,7 @@ export const metricDefinitions = {
     chartLabel: 'Diastolic Blood Pressure (mmHg)',
     unit: 'mmHg',
     decimals: 0,
-    color: '#ffd700',
+    color: 'var(--color-chart-2)',
     ranges: {
       default: { min: 60, max: 85, criticalLow: 50, criticalHigh: 95 },
       eva: { min: 65, max: 92, criticalLow: 55, criticalHigh: 105 },
@@ -324,7 +324,7 @@ export const metricDefinitions = {
     chartLabel: 'Oxygen Saturation SpO₂ (%)',
     unit: '%',
     decimals: 1,
-    color: '#00e5ff',
+    color: 'var(--color-chart-1)',
     ranges: {
       default: { min: 95.0, max: 100.0, criticalLow: 92.0, criticalHigh: 101.0 },
       // Hypobaric habitat lowers saturation slightly (sim_daily mean 96.5%)
@@ -338,7 +338,7 @@ export const metricDefinitions = {
     chartLabel: 'Body Temperature (°C)',
     unit: '°C',
     decimals: 1,
-    color: '#ff9100',
+    color: 'var(--color-chart-2)',
     ranges: {
       default: { min: 36.1, max: 37.3, criticalLow: 35.5, criticalHigh: 38.0 },
       eva: { min: 36.4, max: 37.9, criticalLow: 35.8, criticalHigh: 38.3 },
@@ -350,7 +350,7 @@ export const metricDefinitions = {
     chartLabel: 'Sleep Duration — Prev. Night (hrs)',
     unit: 'hrs',
     decimals: 1,
-    color: '#b388ff',
+    color: 'var(--color-chart-4)',
     ranges: {
       default: { min: 6.0, max: 9.5, criticalLow: 4.8, criticalHigh: 11.5 },
     },
@@ -361,7 +361,7 @@ export const metricDefinitions = {
     chartLabel: 'Activity Level',
     unit: 'level',
     isCategorical: true,
-    color: '#00ff88',
+    color: 'var(--color-chart-3)',
   },
   flight_phase: {
     key: 'flight_phase',
@@ -369,7 +369,7 @@ export const metricDefinitions = {
     chartLabel: 'Flight Phase',
     unit: 'phase',
     isCategorical: true,
-    color: '#00e5ff',
+    color: 'var(--color-chart-1)',
   },
   hip_t_score: {
     key: 'hip_t_score',
@@ -377,7 +377,7 @@ export const metricDefinitions = {
     chartLabel: 'Hip Bone Density T-Score (SD)',
     unit: 'SD',
     decimals: 2,
-    color: '#00ff88',
+    color: 'var(--color-chart-3)',
     ranges: {
       default: { min: -1.5, max: 1.0, criticalLow: -2.5, criticalHigh: 2.5 },
       earth_preflight: { min: -1.0, max: 1.0, criticalLow: -2.0, criticalHigh: 2.5 },
@@ -391,7 +391,7 @@ export const metricDefinitions = {
     chartLabel: 'Vitamin D Concentration (ng/ml)',
     unit: 'ng/ml',
     decimals: 1,
-    color: '#ffd700',
+    color: 'var(--color-chart-2)',
     ranges: {
       default: { min: 35.0, max: 90.0, criticalLow: 25.0, criticalHigh: 110.0 },
     },
@@ -402,7 +402,7 @@ export const metricDefinitions = {
     chartLabel: 'Left Ventricular Mass (g)',
     unit: 'g',
     decimals: 1,
-    color: '#ff4444',
+    color: 'var(--color-chart-5)',
     ranges: {
       default: { min: 160.0, max: 215.0, criticalLow: 145.0, criticalHigh: 230.0 },
     },
@@ -413,7 +413,7 @@ export const metricDefinitions = {
     chartLabel: 'PVT Reaction Time (ms)',
     unit: 'ms',
     decimals: 0,
-    color: '#b388ff',
+    color: 'var(--color-chart-4)',
     ranges: {
       default: { min: 190, max: 340, criticalLow: 140, criticalHigh: 400 },
     },
@@ -424,7 +424,7 @@ export const metricDefinitions = {
     chartLabel: 'EVA Suit Pressure (psia)',
     unit: 'psia',
     decimals: 2,
-    color: '#00ff88',
+    color: 'var(--color-chart-3)',
     ranges: {
       default: { min: 4.15, max: 4.45, criticalLow: 4.0, criticalHigh: 4.65 },
     },
@@ -435,7 +435,7 @@ export const metricDefinitions = {
     chartLabel: 'EVA Suit CO₂ Concentration (ppm)',
     unit: 'ppm',
     decimals: 0,
-    color: '#ffd700',
+    color: 'var(--color-chart-2)',
     ranges: {
       default: { min: 300, max: 4000, criticalLow: 100, criticalHigh: 5000 },
     },
@@ -446,7 +446,7 @@ export const metricDefinitions = {
     chartLabel: 'Cumulative Radiation Dose (mGy)',
     unit: 'mGy',
     decimals: 1,
-    color: '#b388ff',
+    color: 'var(--color-chart-4)',
     ranges: {
       default: { min: 0, max: 130, criticalLow: -1, criticalHigh: 200 },
       spacecraft: { min: 0, max: 45, criticalLow: -1, criticalHigh: 90 },
@@ -854,12 +854,12 @@ export const sectionEnvironmentData = {
   earth_preflight: {
     title: 'Earth Pre-Flight Facility',
     metrics: [
-      { label: 'Ambient Temp', value: '21.5°C', color: '#ff9100' },
-      { label: 'Humidity', value: '45%', color: '#00e5ff' },
-      { label: 'Gravity', value: '1.00 g', color: '#00ff88' },
-      { label: 'Atm. Pressure', value: '14.7 psia', color: '#00ff88' },
-      { label: 'O₂ Level', value: '20.9%', color: '#00e5ff' },
-      { label: 'Bg. Radiation', value: '0.01 mGy/d', color: '#b388ff' },
+      { label: 'Ambient Temp', value: '21.5°C', color: 'var(--color-chart-2)' },
+      { label: 'Humidity', value: '45%', color: 'var(--color-chart-1)' },
+      { label: 'Gravity', value: '1.00 g', color: 'var(--color-chart-3)' },
+      { label: 'Atm. Pressure', value: '14.7 psia', color: 'var(--color-chart-3)' },
+      { label: 'O₂ Level', value: '20.9%', color: 'var(--color-chart-1)' },
+      { label: 'Bg. Radiation', value: '0.01 mGy/d', color: 'var(--color-chart-4)' },
     ],
     radiation: { label: 'Pre-Flight Radiation Baseline (30d)', current: 0.3, limit: 20.0, unit: 'mGy' },
     nasaIndicators: [
@@ -880,12 +880,12 @@ export const sectionEnvironmentData = {
   spacecraft: {
     title: 'Spacecraft Cabin Telemetry',
     metrics: [
-      { label: 'Cabin Temp', value: '21.8°C', color: '#ff9100' },
-      { label: 'Humidity', value: '40%', color: '#00e5ff' },
-      { label: 'Cabin Pressure', value: '14.7 psia', color: '#00ff88' },
-      { label: 'Cabin O₂', value: '21.0%', color: '#00e5ff' },
-      { label: 'Gravity', value: '0.0 g (Transit)', color: '#b388ff' },
-      { label: 'Comm Delay', value: '4.2 min', color: '#ffd700' },
+      { label: 'Cabin Temp', value: '21.8°C', color: 'var(--color-chart-2)' },
+      { label: 'Humidity', value: '40%', color: 'var(--color-chart-1)' },
+      { label: 'Cabin Pressure', value: '14.7 psia', color: 'var(--color-chart-3)' },
+      { label: 'Cabin O₂', value: '21.0%', color: 'var(--color-chart-1)' },
+      { label: 'Gravity', value: '0.0 g (Transit)', color: 'var(--color-chart-4)' },
+      { label: 'Comm Delay', value: '4.2 min', color: 'var(--color-chart-2)' },
     ],
     radiation: { label: 'Deep-Space Transit Radiation Dose', current: 18.6, limit: 100.0, unit: 'mGy' },
     nasaIndicators: [
@@ -906,12 +906,12 @@ export const sectionEnvironmentData = {
   space_station: {
     title: 'ISS Space Station Environment',
     metrics: [
-      { label: 'Cabin Temp', value: '22.3°C', color: '#ff9100' },
-      { label: 'Humidity', value: '42%', color: '#00e5ff' },
-      { label: 'Cabin CO₂', value: '0.38%', color: '#b388ff' },
-      { label: 'Cabin Pressure', value: '14.7 psia', color: '#00ff88' },
-      { label: 'Cabin O₂', value: '20.9%', color: '#00e5ff' },
-      { label: 'Daily Dose', value: '0.35 mGy/d', color: '#ffd700' },
+      { label: 'Cabin Temp', value: '22.3°C', color: 'var(--color-chart-2)' },
+      { label: 'Humidity', value: '42%', color: 'var(--color-chart-1)' },
+      { label: 'Cabin CO₂', value: '0.38%', color: 'var(--color-chart-4)' },
+      { label: 'Cabin Pressure', value: '14.7 psia', color: 'var(--color-chart-3)' },
+      { label: 'Cabin O₂', value: '20.9%', color: 'var(--color-chart-1)' },
+      { label: 'Daily Dose', value: '0.35 mGy/d', color: 'var(--color-chart-2)' },
     ],
     radiation: { label: 'Station Cumulative Radiation (Mission)', current: 43.3, limit: 150.0, unit: 'mGy' },
     nasaIndicators: [
@@ -932,12 +932,12 @@ export const sectionEnvironmentData = {
   planetary_base: {
     title: 'Lunar Surface Habitat',
     metrics: [
-      { label: 'Habitat Pressure', value: '8.2 psia', color: '#00ff88' },
-      { label: 'Habitat O₂', value: '34%', color: '#00e5ff' },
-      { label: 'Gravity', value: '0.17 g (Moon)', color: '#b388ff' },
-      { label: 'Habitat Temp', value: '21.5°C', color: '#ff9100' },
-      { label: 'Comm Delay', value: '1.3 s', color: '#ffd700' },
-      { label: 'Daily Dose', value: '1.4 mGy/d', color: '#ffd700' },
+      { label: 'Habitat Pressure', value: '8.2 psia', color: 'var(--color-chart-3)' },
+      { label: 'Habitat O₂', value: '34%', color: 'var(--color-chart-1)' },
+      { label: 'Gravity', value: '0.17 g (Moon)', color: 'var(--color-chart-4)' },
+      { label: 'Habitat Temp', value: '21.5°C', color: 'var(--color-chart-2)' },
+      { label: 'Comm Delay', value: '1.3 s', color: 'var(--color-chart-2)' },
+      { label: 'Daily Dose', value: '1.4 mGy/d', color: 'var(--color-chart-2)' },
     ],
     radiation: { label: 'Surface Cumulative Radiation (Mission)', current: 38.5, limit: 300.0, unit: 'mGy' },
     nasaIndicators: [
@@ -958,12 +958,12 @@ export const sectionEnvironmentData = {
   earth_postflight: {
     title: 'Post-Flight Rehabilitation Center',
     metrics: [
-      { label: 'Gravity', value: '1.00 g', color: '#00ff88' },
-      { label: 'Ambient Temp', value: '22.0°C', color: '#ff9100' },
-      { label: 'Atm. Pressure', value: '14.7 psia', color: '#00ff88' },
-      { label: 'O₂ Level', value: '20.9%', color: '#00e5ff' },
-      { label: 'Days on Earth', value: 'R+5', color: '#b388ff' },
-      { label: 'Rehab Plan', value: '45 days', color: '#ffd700' },
+      { label: 'Gravity', value: '1.00 g', color: 'var(--color-chart-3)' },
+      { label: 'Ambient Temp', value: '22.0°C', color: 'var(--color-chart-2)' },
+      { label: 'Atm. Pressure', value: '14.7 psia', color: 'var(--color-chart-3)' },
+      { label: 'O₂ Level', value: '20.9%', color: 'var(--color-chart-1)' },
+      { label: 'Days on Earth', value: 'R+5', color: 'var(--color-chart-4)' },
+      { label: 'Rehab Plan', value: '45 days', color: 'var(--color-chart-2)' },
     ],
     radiation: { label: 'Expedition Total Radiation Dose', current: 134.6, limit: 500.0, unit: 'mGy' },
     nasaIndicators: [

@@ -8,6 +8,7 @@ import { generateCrewData, initialAlerts, getTask } from './data/mockData';
 import { useRealtimeVitals } from './hooks/useRealtimeVitals';
 import { useDownlink } from './hooks/useDownlink';
 import { getCriticalReadings, criticalKey } from './utils/metrics';
+import { getAutoTheme, readThemeChoice, saveThemeChoice } from './utils/theme';
 
 // Each view has its own URL so it can be opened on a separate screen
 const VIEW_HASHES = { ground: '#/ground', crew: '#/crew', wrist: '#/wrist' };
@@ -36,6 +37,7 @@ function App() {
   const [alerts, setAlerts] = useState(initialAlerts);
   const [groundTab, setGroundTab] = useState('live');
   const [crewPage, setCrewPage] = useState('vitals');
+  const [themeChoice, setThemeChoice] = useState(readThemeChoice);
   // Acknowledged critical readings, kept separately for ground and crew:
   // "<audience>|<astronaut>:<phase>:<metric>". The wrist and tablet belong to the same astronaut,
   // so acknowledging on one silences both.
@@ -77,6 +79,23 @@ function App() {
     setGroundTab('live');
     setCrewPage('vitals');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Ground Control keeps the cabin theme; crew devices use the astronaut's choice or Auto
+  const theme =
+    view === 'ground'
+      ? 'cabin'
+      : themeChoice === 'auto'
+        ? getAutoTheme(crewData[selectedAstronaut])
+        : themeChoice;
+  useEffect(() => {
+    if (theme === 'cabin') delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = theme;
+  }, [theme]);
+
+  const handleThemeChoice = (choice) => {
+    setThemeChoice(choice);
+    saveThemeChoice(choice);
   };
 
   useEffect(() => {
@@ -137,10 +156,13 @@ function App() {
     blinking,
     emergencies,
     onToggleEmergency: toggleEmergency,
+    themeChoice,
+    theme,
+    onThemeChoice: handleThemeChoice,
   };
 
   return (
-    <div className="min-h-screen bg-space-900 text-white stars-bg">
+    <div className="min-h-screen bg-space-900 text-white">
       {/* Crew devices have their own compact chrome to save space on small screens */}
       {view === 'ground' && <Header view={view} onChangeView={handleChangeView} />}
       {view === 'wrist' && (

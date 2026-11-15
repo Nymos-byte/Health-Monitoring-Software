@@ -55,7 +55,7 @@ export default function AssignmentsPanel({
                   key={phase}
                   className={`px-2 py-0.5 rounded text-[11px] ${
                     i === current
-                      ? 'bg-nasa-blue text-white'
+                      ? 'bg-nasa-blue text-on-accent'
                       : i < current
                         ? 'bg-space-700 text-gray-400'
                         : 'border border-space-600 text-gray-600'

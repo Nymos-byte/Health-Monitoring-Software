@@ -1,4 +1,5 @@
 import { Check, MonitorDot, Siren, Watch } from 'lucide-react';
+import { THEMES } from '../../utils/theme';
 
 // Display settings plus the demo controls that a real device would not need on its main screens
 export default function SettingsPage({
@@ -10,9 +11,35 @@ export default function SettingsPage({
   emergencyActive,
   onToggleEmergency,
   onChangeView,
+  themeChoice,
+  theme,
+  onThemeChoice,
 }) {
+  const active = THEMES.find((t) => t.id === theme);
+
   return (
     <div className="space-y-6">
+      <section className="space-y-2">
+        <h3 className="text-xs uppercase tracking-wider text-gray-500">Colours</h3>
+        <div className="grid grid-cols-2 gap-3">
+          {THEMES.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => onThemeChoice(t.id)}
+              className={`min-h-[64px] px-3 rounded-xl border-2 text-left cursor-pointer ${
+                themeChoice === t.id ? 'border-vital-cyan bg-vital-cyan/10' : 'border-space-600'
+              }`}
+            >
+              <span className="block text-lg text-white">{t.label}</span>
+              <span className="block text-xs text-gray-400">{t.hint}</span>
+            </button>
+          ))}
+        </div>
+        {themeChoice === 'auto' && (
+          <p className="text-sm text-gray-400">Now using: {active.label}</p>
+        )}
+      </section>
+
       <section className="space-y-2">
         <h3 className="text-xs uppercase tracking-wider text-gray-500">Text size</h3>
         <div className="grid grid-cols-2 gap-3">

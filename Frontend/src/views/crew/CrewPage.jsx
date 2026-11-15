@@ -55,7 +55,7 @@ export default function CrewPage({ member, crewData }) {
                     <p className="text-xs text-gray-400 truncate">{crewLabels[key]}</p>
                     <p
                       className="text-2xl font-bold font-mono leading-tight"
-                      style={{ color: s === 'nominal' ? '#f3f4f6' : getStatusColor(s) }}
+                      style={{ color: s === 'nominal' ? 'var(--color-white)' : getStatusColor(s) }}
                     >
                       {formatMetricValue(key, vitals)}
                     </p>
