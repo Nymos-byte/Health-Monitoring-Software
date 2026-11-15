@@ -3,7 +3,7 @@ import Header from './components/Header';
 import GroundView from './views/GroundView';
 import CrewView from './views/CrewView';
 import CriticalAlertModal from './components/CriticalAlertModal';
-import { generateCrewData, initialAlerts } from './data/mockData';
+import { generateCrewData, initialAlerts, getTask } from './data/mockData';
 import { useRealtimeVitals } from './hooks/useRealtimeVitals';
 import { useDownlink } from './hooks/useDownlink';
 import { getCriticalReadings, criticalKey } from './utils/metrics';
@@ -15,12 +15,12 @@ function getViewFromHash() {
 
 function App() {
   const initialData = useMemo(() => generateCrewData(), []);
-  const { crewData, emergencies, toggleEmergency } = useRealtimeVitals(initialData);
+  const { crewData, emergencies, toggleEmergency, assignTask } = useRealtimeVitals(initialData);
   // Crew sees onboard data; ground sees only what the downlink has delivered
   const { groundData, links, now, forcedLoss, toggleLinkLoss } = useDownlink(crewData);
   const [view, setView] = useState(getViewFromHash);
-  const [selectedSection, setSelectedSection] = useState('space_station');
   const [selectedAstronaut, setSelectedAstronaut] = useState('ast-001');
+  const [selectedSection, setSelectedSection] = useState(() => initialData['ast-001'].env);
   const [alerts, setAlerts] = useState(initialAlerts);
   const [groundTab, setGroundTab] = useState('live');
   // Acknowledged critical readings, kept separately for each view: "<view>|<astronaut>:<phase>:<metric>"
@@ -29,7 +29,7 @@ function App() {
   // Ground watches the whole crew (as received); the crew display only the astronaut wearing it
   const criticalReadings =
     view === 'crew'
-      ? getCriticalReadings(crewData, { astronautId: selectedAstronaut, sectionId: selectedSection })
+      ? getCriticalReadings(crewData, { astronautId: selectedAstronaut })
       : getCriticalReadings(groundData);
   const unacknowledged = criticalReadings.filter((r) => !acknowledged.has(`${view}|${r.id}`));
   // Every reading involved in an unacknowledged emergency blinks
@@ -68,6 +68,23 @@ function App() {
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
+  // Selecting an astronaut opens the environment they are in; selecting an environment
+  // focuses someone working there (if anyone is)
+  const handleSelectAstronaut = (id) => {
+    setSelectedAstronaut(id);
+    setSelectedSection(crewData[id].env);
+  };
+  const handleSelectSection = (envId) => {
+    setSelectedSection(envId);
+    const first = Object.values(crewData).find((m) => m.env === envId);
+    if (first) setSelectedAstronaut(first.id);
+  };
+  const handleAssignTask = (id, taskId) => {
+    assignTask(id, taskId);
+    setSelectedAstronaut(id);
+    setSelectedSection(getTask(taskId).environment);
+  };
+
   const handleChangeView = (next) => {
     window.location.hash = next === 'crew' ? '#/crew' : '#/ground';
   };
@@ -83,8 +100,9 @@ function App() {
     alerts,
     selectedSection,
     selectedAstronaut,
-    onSelectSection: setSelectedSection,
-    onSelectAstronaut: setSelectedAstronaut,
+    onSelectSection: handleSelectSection,
+    onSelectAstronaut: handleSelectAstronaut,
+    onAssignTask: handleAssignTask,
     blinking,
     emergencies,
     onToggleEmergency: toggleEmergency,

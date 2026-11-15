@@ -1,6 +1,13 @@
 import { useState } from 'react';
-import { CheckCircle2, AlertTriangle, AlertOctagon, ChevronDown } from 'lucide-react';
-import { SECTIONS, metricDefinitions, getMetricRange, getVitalContext } from '../data/mockData';
+import { CheckCircle2, AlertTriangle, AlertOctagon, ChevronDown, ClipboardList } from 'lucide-react';
+import {
+  metricDefinitions,
+  getMetricRange,
+  getVitalContext,
+  getEnvironment,
+  getTaskMetrics,
+  getTaskPrimaryMetrics,
+} from '../data/mockData';
 import { getVitalStatus, getStatusColor } from '../utils/helpers';
 import {
   metricIcons,
@@ -11,33 +18,34 @@ import {
   getStatusOutline,
   getCriticalReadings,
 } from '../utils/metrics';
+import TaskSelect from '../components/TaskSelect';
 
 const crewStatusLabel = { nominal: 'Normal', caution: 'Watch', critical: 'Alert' };
 const severityRank = { critical: 0, caution: 1, nominal: 2 };
 
 export default function CrewView({
   crewData,
-  selectedSection,
   selectedAstronaut,
-  onSelectSection,
   onSelectAstronaut,
+  onAssignTask,
   blinking,
   emergencies,
   onToggleEmergency,
 }) {
   const [showMore, setShowMore] = useState(false);
   const member = crewData[selectedAstronaut];
-  const section = SECTIONS.find((s) => s.id === selectedSection) || SECTIONS[0];
-  const vitals = member?.sections?.[selectedSection]?.currentVitals || {};
+  const env = getEnvironment(member.env);
+  const vitals = member.data.currentVitals;
   const context = getVitalContext(member, vitals);
 
-  const numericMetrics = section.metrics.filter((k) => !metricDefinitions[k]?.isCategorical);
-  const primary = section.primaryMetrics;
+  // The readings on screen follow the astronaut's current task (e.g. suit telemetry during EVA)
+  const numericMetrics = getTaskMetrics(member.task).filter((k) => !metricDefinitions[k].isCategorical);
+  const primary = getTaskPrimaryMetrics(member.task);
   const secondary = numericMetrics.filter((k) => !primary.includes(k));
 
   // Every out-of-range reading becomes an action item, whether or not it is on the main screen
   const issues = numericMetrics
-    .map((key) => ({ key, status: getVitalStatus(key, vitals[key], selectedSection, context) }))
+    .map((key) => ({ key, status: getVitalStatus(key, vitals[key], env.id, context) }))
     .filter((i) => i.status !== 'nominal')
     .sort(
       (a, b) =>
@@ -45,28 +53,27 @@ export default function CrewView({
         primary.includes(b.key) - primary.includes(a.key)
     );
   const secondaryIssues = issues.filter((i) => secondary.includes(i.key)).length;
-  const isBlinking = (key) => blinking.has(criticalKey(selectedAstronaut, selectedSection, key));
-  const emergencyActive = emergencies.has(`${selectedAstronaut}:${selectedSection}`);
-  const activeRules = getCriticalReadings(crewData, {
-    astronautId: selectedAstronaut,
-    sectionId: selectedSection,
-  })
+  const isBlinking = (key) => blinking.has(criticalKey(member.id, env.id, key));
+  const emergencyActive = emergencies.has(member.id);
+  const activeRules = getCriticalReadings(crewData, { astronautId: member.id })
     .map((r) => r.rule)
     .filter(Boolean);
 
-  if (!member) return null;
-
   return (
     <main className="max-w-5xl mx-auto px-4 py-6 space-y-5">
-      {/* Who and where */}
+      {/* Who, where and what they are doing */}
       <div className="flex items-center gap-4">
         <span className="text-5xl">{member.avatar}</span>
         <div>
           <h2 className="text-2xl font-bold">{member.name}</h2>
           <p className="text-gray-400">
-            {section.name} · {section.missionDayLabel}
-            {vitals.flight_phase && section.id === 'spacecraft' && ` · ${vitals.flight_phase}`}
-            {vitals.activity_level && ` · Activity: ${vitals.activity_level}`}
+            {env.name} · {env.missionDayLabel}
+            {vitals.flight_phase && env.id === 'spacecraft' && ` · ${vitals.flight_phase}`}
+          </p>
+          <p className="mt-1 flex items-center gap-2 text-gray-200">
+            <ClipboardList size={16} className="text-vital-cyan" />
+            {member.task.name}
+            <span className="text-gray-500">· {member.task.activity} activity</span>
           </p>
         </div>
       </div>
@@ -75,7 +82,7 @@ export default function CrewView({
         issues={issues}
         rules={activeRules}
         vitals={vitals}
-        sectionId={selectedSection}
+        sectionId={env.id}
         context={context}
       />
 
@@ -86,7 +93,7 @@ export default function CrewView({
             key={key}
             metricKey={key}
             vitals={vitals}
-            sectionId={selectedSection}
+            sectionId={env.id}
             context={context}
             blinking={isBlinking(key)}
           />
@@ -118,7 +125,7 @@ export default function CrewView({
                 key={key}
                 metricKey={key}
                 vitals={vitals}
-                sectionId={selectedSection}
+                sectionId={env.id}
                 context={context}
                 blinking={isBlinking(key)}
               />
@@ -127,7 +134,7 @@ export default function CrewView({
         )}
       </div>
 
-      {/* Demo controls: on a real mission these come from the suit / vehicle context */}
+      {/* Demo controls: on a real mission the astronaut and task come from the device and the plan */}
       <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-space-700 text-xs text-gray-500">
         <span className="uppercase tracking-wider">Simulation</span>
         <select
@@ -139,17 +146,13 @@ export default function CrewView({
             <option key={m.id} value={m.id}>{m.name}</option>
           ))}
         </select>
-        <select
-          value={selectedSection}
-          onChange={(e) => onSelectSection(e.target.value)}
-          className="bg-space-800 border border-space-600 rounded-md px-2 py-1 text-gray-300"
-        >
-          {SECTIONS.map((s) => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
-        </select>
+        <TaskSelect
+          value={member.taskId}
+          onChange={(taskId) => onAssignTask(member.id, taskId)}
+          className="!text-xs !text-gray-300"
+        />
         <button
-          onClick={() => onToggleEmergency(selectedAstronaut, selectedSection)}
+          onClick={() => onToggleEmergency(member.id)}
           className={`px-2 py-1 rounded-md border cursor-pointer ${
             emergencyActive
               ? 'border-vital-red text-vital-red'

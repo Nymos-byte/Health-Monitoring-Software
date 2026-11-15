@@ -1,11 +1,9 @@
-import { getMetricRange, SECTIONS, COMBINED_RULES } from '../data/mockData';
+import { getMetricRange, getTaskMetrics, getVitalContext, COMBINED_RULES } from '../data/mockData';
 
-// context: { activity, age } so exertion-dependent limits can be applied (see getMetricRange)
+// context: { activity, age, eva } so task-dependent limits can be applied (see getMetricRange)
 export function getVitalStatus(vitalName, value, sectionId = 'space_station', context = {}) {
-  if (vitalName === 'activity_level') {
-    if (value === 'Intense' && sectionId !== 'eva_vehicle') return 'caution';
-    return 'nominal';
-  }
+  // Activity level comes from the assigned task, so it is never an alarm by itself
+  if (vitalName === 'activity_level') return 'nominal';
   if (vitalName === 'flight_phase') {
     if (value === 'Launch' || value === 'Reentry') return 'caution';
     return 'nominal';
@@ -19,43 +17,36 @@ export function getVitalStatus(vitalName, value, sectionId = 'space_station', co
   return 'nominal';
 }
 
-export function determineSectionStatus(vitals, sectionId, age) {
-  const section = SECTIONS.find((s) => s.id === sectionId) || SECTIONS[0];
-  const context = { activity: vitals.activity_level, age };
-  let hasCritical = false;
-  let hasCaution = false;
+function metricStatuses(member, vitals) {
+  const context = getVitalContext(member, vitals);
+  return getTaskMetrics(member.task).map((key) => ({
+    key,
+    status: getVitalStatus(key, vitals[key], member.env, context),
+  }));
+}
 
-  for (const key of section.metrics) {
-    if (key === 'activity_level' || key === 'flight_phase') continue;
-    const status = getVitalStatus(key, vitals[key], sectionId, context);
-    if (status === 'critical') hasCritical = true;
-    else if (status === 'caution') hasCaution = true;
-  }
+// Overall status of an astronaut for their current task (defaults to the latest readings)
+export function getMemberStatus(member, vitals = member.data.currentVitals) {
+  const statuses = metricStatuses(member, vitals);
+  const outOfRange = new Set(statuses.filter((s) => s.status !== 'nominal').map((s) => s.key));
+  const metrics = getTaskMetrics(member.task);
 
   // Several readings out of range together count as critical (see COMBINED_RULES)
   const combined = COMBINED_RULES.some(
     (rule) =>
-      rule.metrics.every((key) => section.metrics.includes(key)) &&
-      rule.metrics.filter((key) => getVitalStatus(key, vitals[key], sectionId, context) !== 'nominal')
-        .length >= rule.min
+      rule.metrics.every((key) => metrics.includes(key)) &&
+      rule.metrics.filter((key) => outOfRange.has(key)).length >= rule.min
   );
-  if (hasCritical || combined) return 'critical';
-  if (hasCaution) return 'caution';
+  if (combined || statuses.some((s) => s.status === 'critical')) return 'critical';
+  if (outOfRange.size) return 'caution';
   return 'nominal';
 }
 
-export function calculateSectionHealthScore(vitals, sectionId, age) {
-  const section = SECTIONS.find((s) => s.id === sectionId) || SECTIONS[0];
-  const context = { activity: vitals.activity_level, age };
-  let score = 100;
-
-  for (const key of section.metrics) {
-    if (key === 'activity_level' || key === 'flight_phase') continue;
-    const status = getVitalStatus(key, vitals[key], sectionId, context);
-    if (status === 'critical') score -= 18;
-    else if (status === 'caution') score -= 8;
-  }
-
+export function calculateHealthScore(member, vitals = member.data.currentVitals) {
+  const score = metricStatuses(member, vitals).reduce(
+    (acc, { status }) => acc - (status === 'critical' ? 18 : status === 'caution' ? 8 : 0),
+    100
+  );
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 

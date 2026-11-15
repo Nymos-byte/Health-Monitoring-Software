@@ -32,7 +32,7 @@ export default function AlertsPanel({ alerts, selectedSection, onAcknowledge }) 
         </h3>
         <div className="flex text-[11px] bg-space-900/80 rounded-md p-0.5">
           {[
-            ['phase', 'This phase'],
+            ['phase', 'This environment'],
             ['all', 'All'],
           ].map(([id, label]) => (
             <button
@@ -49,7 +49,7 @@ export default function AlertsPanel({ alerts, selectedSection, onAcknowledge }) 
       </div>
 
       {visible.length === 0 && (
-        <p className="text-xs text-gray-500 px-1 py-3">No alerts for this phase.</p>
+        <p className="text-xs text-gray-500 px-1 py-3">No alerts for this environment.</p>
       )}
 
       <div className="space-y-1.5 max-h-[420px] overflow-y-auto pr-1">

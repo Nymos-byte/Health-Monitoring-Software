@@ -1,150 +1,123 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { SECTIONS, getMetricRange, getVitalContext } from '../data/mockData';
-import { determineSectionStatus } from '../utils/helpers';
+import {
+  crewMembers,
+  getMetricRange,
+  getVitalContext,
+  buildAssignment,
+} from '../data/mockData';
 
-// Simulated emergency: heart rate held above its (activity-adjusted) critical limit until cleared
-function emergencyHeartRate(sectionId, context) {
-  return getMetricRange('heart_rate_bpm', sectionId, context).criticalHigh + 5 + Math.round(Math.random() * 4);
+const TELEMETRY_TICK_MS = 3000;
+const HISTORY_LENGTH = 50;
+
+// Simulated emergency: heart rate held above its (task-adjusted) critical limit until cleared
+function emergencyHeartRate(member, vitals) {
+  const range = getMetricRange('heart_rate_bpm', member.env, getVitalContext(member, vitals));
+  return range.criticalHigh + 5 + Math.round(Math.random() * 4);
 }
 
-function normalHeartRate(sectionId) {
-  const range = getMetricRange('heart_rate_bpm', sectionId);
+function normalHeartRate(member, vitals) {
+  const range = getMetricRange('heart_rate_bpm', member.env, getVitalContext(member, vitals));
   return Math.round((range.min + range.max) / 2);
 }
 
-// Hook to simulate real-time vital sign and telemetry updates across all 4 mission sections
+// Next onboard sample for one astronaut doing their current task
+function nextVitals(member, emergency) {
+  const cv = { ...member.data.currentVitals };
+  const hrMin = member.task.eva ? 68 : 48;
+
+  cv.heart_rate_bpm = emergency
+    ? emergencyHeartRate(member, cv)
+    : Math.round(clamp(cv.heart_rate_bpm + randomDelta(2), hrMin, 175));
+  cv.systolic_bp_mmhg = Math.round(clamp(cv.systolic_bp_mmhg + randomDelta(2), 88, 165));
+  cv.diastolic_bp_mmhg = Math.round(clamp(cv.diastolic_bp_mmhg + randomDelta(1), 55, 105));
+  cv.spo2_pct = clamp(Math.round((cv.spo2_pct + randomDelta(0.2)) * 10) / 10, 89.5, 100.0);
+  cv.body_temp_c = clamp(Math.round((cv.body_temp_c + randomDelta(0.05)) * 10) / 10, 35.6, 38.6);
+  cv.sleep_hours_prev_night = clamp(
+    Math.round((cv.sleep_hours_prev_night + randomDelta(0.05)) * 10) / 10,
+    3.5,
+    9.8
+  );
+  cv.hip_t_score = clamp(Math.round((cv.hip_t_score + randomDelta(0.01)) * 100) / 100, -2.6, 0.8);
+  cv.vitamin_d_ng_ml = clamp(Math.round((cv.vitamin_d_ng_ml + randomDelta(0.3)) * 10) / 10, 25.0, 95.0);
+  cv.lv_mass_g = clamp(Math.round((cv.lv_mass_g + randomDelta(0.4)) * 10) / 10, 145.0, 220.0);
+  cv.pvt_reaction_time_ms = Math.round(clamp(cv.pvt_reaction_time_ms + randomDelta(4), 190, 430));
+  cv.cumulative_radiation_mgy = clamp(
+    Math.round((cv.cumulative_radiation_mgy + Math.max(0, randomDelta(0.04))) * 10) / 10,
+    0.0,
+    450.0
+  );
+  if (member.task.eva) {
+    cv.suit_pressure_psia = clamp(
+      Math.round((cv.suit_pressure_psia + randomDelta(0.02)) * 100) / 100,
+      3.95,
+      4.55
+    );
+    cv.suit_co2_ppm = Math.round(clamp(cv.suit_co2_ppm + randomDelta(45), 600, 6200));
+  }
+  return cv;
+}
+
+function withVitals(member, cv, sample) {
+  const vitals = sample ? [...member.data.vitals, sample].slice(-HISTORY_LENGTH) : member.data.vitals;
+  return { ...member, data: { ...member.data, currentVitals: cv, vitals } };
+}
+
+// Simulates real-time telemetry for every astronaut in their assigned task.
+// Each astronaut has exactly one task; reassigning regenerates their data for the new context.
 export function useRealtimeVitals(initialCrewData) {
   const [crewData, setCrewData] = useState(initialCrewData);
   const [emergencies, setEmergencies] = useState(() => new Set());
   const emergenciesRef = useRef(emergencies);
-  const intervalRef = useRef(null);
 
-  const toggleEmergency = useCallback((astronautId, sectionId) => {
-    const key = `${astronautId}:${sectionId}`;
+  const toggleEmergency = useCallback((astronautId) => {
     const next = new Set(emergenciesRef.current);
-    const active = !next.has(key);
-    if (active) next.add(key);
-    else next.delete(key);
+    const active = !next.has(astronautId);
+    if (active) next.add(astronautId);
+    else next.delete(astronautId);
     emergenciesRef.current = next;
     setEmergencies(next);
 
     // Apply immediately instead of waiting for the next telemetry tick
     setCrewData((prev) => {
       const member = prev[astronautId];
-      const secData = member.sections[sectionId];
-      const cv = {
-        ...secData.currentVitals,
-        heart_rate_bpm: active
-          ? emergencyHeartRate(sectionId, getVitalContext(member, secData.currentVitals))
-          : normalHeartRate(sectionId),
-      };
-      return {
-        ...prev,
-        [astronautId]: {
-          ...member,
-          sections: {
-            ...member.sections,
-            [sectionId]: { ...secData, currentVitals: cv, status: determineSectionStatus(cv, sectionId, member.age) },
-          },
-        },
-      };
+      const cv = member.data.currentVitals;
+      const heartRate = active ? emergencyHeartRate(member, cv) : normalHeartRate(member, cv);
+      return { ...prev, [astronautId]: withVitals(member, { ...cv, heart_rate_bpm: heartRate }) };
+    });
+  }, []);
+
+  const assignTask = useCallback((astronautId, taskId) => {
+    const next = new Set(emergenciesRef.current);
+    next.delete(astronautId);
+    emergenciesRef.current = next;
+    setEmergencies(next);
+
+    setCrewData((prev) => {
+      const index = crewMembers.findIndex((m) => m.id === astronautId);
+      return { ...prev, [astronautId]: buildAssignment(crewMembers[index], taskId, index) };
     });
   }, []);
 
   const updateVitals = useCallback(() => {
     setCrewData((prev) => {
-      const updated = { ...prev };
       const now = new Date();
-      const timeStr = now.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      });
-
-      Object.keys(updated).forEach((id) => {
-        const member = { ...updated[id], sections: { ...updated[id].sections } };
-
-        SECTIONS.forEach((sec) => {
-          const secData = { ...member.sections[sec.id] };
-          const cv = { ...secData.currentVitals };
-
-          const hrMin = sec.id === 'eva_vehicle' ? 68 : 48;
-          const hrMax = sec.id === 'eva_vehicle' ? 175 : 135;
-
-          cv.heart_rate_bpm = emergenciesRef.current.has(`${id}:${sec.id}`)
-            ? emergencyHeartRate(sec.id, getVitalContext(member, cv))
-            : Math.round(clamp(cv.heart_rate_bpm + randomDelta(2), hrMin, hrMax));
-          cv.systolic_bp_mmhg = Math.round(clamp(cv.systolic_bp_mmhg + randomDelta(2), 88, 165));
-          cv.diastolic_bp_mmhg = Math.round(clamp(cv.diastolic_bp_mmhg + randomDelta(1), 55, 105));
-          cv.spo2_pct = clamp(Math.round((cv.spo2_pct + randomDelta(0.2)) * 10) / 10, 89.5, 100.0);
-          cv.body_temp_c = clamp(Math.round((cv.body_temp_c + randomDelta(0.05)) * 10) / 10, 35.6, 38.6);
-          cv.sleep_hours_prev_night = clamp(
-            Math.round((cv.sleep_hours_prev_night + randomDelta(0.05)) * 10) / 10,
-            3.5,
-            9.8
-          );
-          cv.hip_t_score = clamp(Math.round((cv.hip_t_score + randomDelta(0.01)) * 100) / 100, -2.6, 0.8);
-          cv.vitamin_d_ng_ml = clamp(
-            Math.round((cv.vitamin_d_ng_ml + randomDelta(0.3)) * 10) / 10,
-            25.0,
-            95.0
-          );
-          cv.lv_mass_g = clamp(Math.round((cv.lv_mass_g + randomDelta(0.4)) * 10) / 10, 145.0, 220.0);
-          cv.pvt_reaction_time_ms = Math.round(
-            clamp(cv.pvt_reaction_time_ms + randomDelta(4), 190, 430)
-          );
-          cv.suit_pressure_psia = clamp(
-            Math.round((cv.suit_pressure_psia + randomDelta(0.02)) * 100) / 100,
-            3.95,
-            4.55
-          );
-          cv.suit_co2_ppm = Math.round(clamp(cv.suit_co2_ppm + randomDelta(45), 600, 6200));
-          cv.cumulative_radiation_mgy = clamp(
-            Math.round((cv.cumulative_radiation_mgy + Math.max(0, randomDelta(0.04))) * 10) / 10,
-            0.0,
-            220.0
-          );
-
-          secData.currentVitals = cv;
-
-          const vitals = [...secData.vitals];
-          vitals.push({
-            time: timeStr,
-            timestamp: now.getTime(),
-            heart_rate_bpm: cv.heart_rate_bpm,
-            systolic_bp_mmhg: cv.systolic_bp_mmhg,
-            diastolic_bp_mmhg: cv.diastolic_bp_mmhg,
-            spo2_pct: cv.spo2_pct,
-            body_temp_c: cv.body_temp_c,
-            sleep_hours_prev_night: cv.sleep_hours_prev_night,
-            hip_t_score: cv.hip_t_score,
-            vitamin_d_ng_ml: cv.vitamin_d_ng_ml,
-            lv_mass_g: cv.lv_mass_g,
-            pvt_reaction_time_ms: cv.pvt_reaction_time_ms,
-            suit_pressure_psia: cv.suit_pressure_psia,
-            suit_co2_ppm: cv.suit_co2_ppm,
-            cumulative_radiation_mgy: cv.cumulative_radiation_mgy,
-          });
-          if (vitals.length > 50) vitals.shift();
-          secData.vitals = vitals;
-
-          secData.status = determineSectionStatus(cv, sec.id, member.age);
-          member.sections[sec.id] = secData;
-        });
-
-        updated[id] = member;
-      });
-
-      return updated;
+      const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+      return Object.fromEntries(
+        Object.entries(prev).map(([id, member]) => {
+          const cv = nextVitals(member, emergenciesRef.current.has(id));
+          const sample = { ...cv, time, timestamp: now.getTime() };
+          return [id, withVitals(member, cv, sample)];
+        })
+      );
     });
   }, []);
 
   useEffect(() => {
-    intervalRef.current = setInterval(updateVitals, 3000);
-    return () => clearInterval(intervalRef.current);
+    const interval = setInterval(updateVitals, TELEMETRY_TICK_MS);
+    return () => clearInterval(interval);
   }, [updateVitals]);
 
-  return { crewData, emergencies, toggleEmergency };
+  return { crewData, emergencies, toggleEmergency, assignTask };
 }
 
 function randomDelta(magnitude) {

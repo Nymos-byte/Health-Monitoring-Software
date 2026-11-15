@@ -1,31 +1,33 @@
 import {
   getStatusColor,
   getStatusLabel,
-  calculateSectionHealthScore,
+  getMemberStatus,
+  calculateHealthScore,
 } from '../utils/helpers';
+import { getEnvironment } from '../data/mockData';
+import TaskSelect from './TaskSelect';
 
-export default function AstronautProfile({ member, selectedSection }) {
+export default function AstronautProfile({ member, onAssignTask }) {
   if (!member) return null;
 
-  const secData = member.sections?.[selectedSection];
-  const cv = secData?.currentVitals || {};
-  const status = secData?.status || 'nominal';
+  const cv = member.data.currentVitals;
+  const env = getEnvironment(member.env);
+  const status = getMemberStatus(member);
   const statusColor = getStatusColor(status);
-  const healthScore = calculateSectionHealthScore(cv, selectedSection, member.age);
-  const missionDay = member.missionDays?.[selectedSection];
+  const healthScore = calculateHealthScore(member);
 
   const facts = [
     member.role,
     `${member.age} yrs · ${member.nationality}`,
-    missionDay < 0 ? `Pre-flight day ${missionDay}` : `Mission day ${missionDay}`,
-    cv.activity_level && `Activity: ${cv.activity_level}`,
-    selectedSection === 'spacecraft' && cv.flight_phase && `Phase: ${cv.flight_phase}`,
+    env.missionDayLabel,
+    member.env === 'spacecraft' && cv.flight_phase && `Phase: ${cv.flight_phase}`,
+    member.task.evaLocation && `EVA: ${member.task.evaLocation}`,
   ].filter(Boolean);
 
   return (
-    <div className="flex items-center gap-4 bg-space-800/80 border border-space-600 rounded-xl px-5 py-4">
+    <div className="flex flex-wrap items-center gap-4 bg-space-800/80 border border-space-600 rounded-xl px-5 py-4">
       <span className="text-4xl">{member.avatar}</span>
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-[240px]">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-lg font-bold text-white">{member.name}</h2>
           <span className="text-[11px] font-mono text-gray-500">{member.astronautId}</span>
@@ -36,6 +38,13 @@ export default function AstronautProfile({ member, selectedSection }) {
           )}
         </div>
         <p className="text-sm text-gray-400 mt-0.5">{facts.join('  ·  ')}</p>
+        <label className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-400">
+          Current task
+          <TaskSelect value={member.taskId} onChange={(taskId) => onAssignTask(member.id, taskId)} />
+          <span className="text-xs text-gray-500">
+            ({env.name} · {member.task.activity} activity)
+          </span>
+        </label>
       </div>
       <div className="text-right shrink-0">
         <div className="text-3xl font-bold font-mono" style={{ color: statusColor }}>

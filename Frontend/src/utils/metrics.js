@@ -12,15 +12,29 @@ import {
   Sun,
   Heart,
   Gauge,
+  Globe,
+  Satellite,
+  Rocket,
+  Mountain,
+  PlaneLanding,
 } from 'lucide-react';
 import {
-  SECTIONS,
   metricDefinitions,
   getMetricRange,
   getVitalContext,
+  getEnvironment,
+  getTaskMetrics,
   COMBINED_RULES,
 } from '../data/mockData';
 import { getVitalStatus, getStatusColor } from './helpers';
+
+export const environmentIcons = {
+  earth_preflight: Globe,
+  spacecraft: Rocket,
+  space_station: Satellite,
+  planetary_base: Mountain,
+  earth_postflight: PlaneLanding,
+};
 
 export const metricIcons = {
   heart_rate_bpm: Heart,
@@ -127,33 +141,32 @@ function isConfirmedCombination(rule, current, history, sectionId, context) {
   );
 }
 
-// Confirmed emergencies (single critical readings and combined rules),
-// optionally limited to one astronaut and/or phase
-export function getCriticalReadings(crewData, { astronautId, sectionId } = {}) {
+// Confirmed emergencies (single critical readings and combined rules) for each astronaut's
+// current task, optionally limited to one astronaut
+export function getCriticalReadings(crewData, { astronautId } = {}) {
   const readings = [];
   Object.values(crewData).forEach((member) => {
     if (astronautId && member.id !== astronautId) return;
-    SECTIONS.forEach((sec) => {
-      if (sectionId && sec.id !== sectionId) return;
-      const { currentVitals: vitals, vitals: history } = member.sections[sec.id];
-      const context = getVitalContext(member, vitals);
-      const base = { member, section: sec, vitals, context };
+    const env = getEnvironment(member.env);
+    const metrics = getTaskMetrics(member.task);
+    const { currentVitals: vitals, vitals: history } = member.data;
+    const context = getVitalContext(member, vitals);
+    const base = { member, section: env, vitals, context };
 
-      sec.metrics.forEach((key) => {
-        if (metricDefinitions[key].isCategorical) return;
-        if (!isConfirmedCritical(key, vitals[key], history, sec.id, context)) return;
-        readings.push({ ...base, id: criticalKey(member.id, sec.id, key), metricKeys: [key] });
-      });
+    metrics.forEach((key) => {
+      if (metricDefinitions[key].isCategorical) return;
+      if (!isConfirmedCritical(key, vitals[key], history, env.id, context)) return;
+      readings.push({ ...base, id: criticalKey(member.id, env.id, key), metricKeys: [key] });
+    });
 
-      COMBINED_RULES.forEach((rule) => {
-        if (!rule.metrics.every((key) => sec.metrics.includes(key))) return;
-        if (!isConfirmedCombination(rule, vitals, history, sec.id, context)) return;
-        readings.push({
-          ...base,
-          id: criticalKey(member.id, sec.id, rule.id),
-          metricKeys: outOfRangeMetrics(rule, vitals, sec.id, context),
-          rule,
-        });
+    COMBINED_RULES.forEach((rule) => {
+      if (!rule.metrics.every((key) => metrics.includes(key))) return;
+      if (!isConfirmedCombination(rule, vitals, history, env.id, context)) return;
+      readings.push({
+        ...base,
+        id: criticalKey(member.id, env.id, rule.id),
+        metricKeys: outOfRangeMetrics(rule, vitals, env.id, context),
+        rule,
       });
     });
   });

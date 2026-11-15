@@ -1,6 +1,8 @@
-import { getStatusColor, getStatusLabel } from '../utils/helpers';
+import { getStatusColor, getStatusLabel, getMemberStatus } from '../utils/helpers';
+import { getEnvironment } from '../data/mockData';
 
-export default function CrewRoster({ crewData, selectedId, selectedSection, blinking, onSelect }) {
+// Whole crew with where each astronaut is and what they are doing right now
+export default function CrewRoster({ crewData, selectedId, blinking, onSelect }) {
   const members = Object.values(crewData);
 
   return (
@@ -9,13 +11,10 @@ export default function CrewRoster({ crewData, selectedId, selectedSection, blin
       <div className="space-y-1.5">
         {members.map((member) => {
           const isActive = member.id === selectedId;
-          const secData = member.sections?.[selectedSection];
-          const status = secData?.status || 'nominal';
+          const status = getMemberStatus(member);
           const color = getStatusColor(status);
-          const cv = secData?.currentVitals || {};
-          const hasUnacknowledgedCritical = [...blinking].some((k) =>
-            k.startsWith(`${member.id}:${selectedSection}:`)
-          );
+          const cv = member.data.currentVitals;
+          const hasUnacknowledgedCritical = [...blinking].some((k) => k.startsWith(`${member.id}:`));
 
           return (
             <button
@@ -30,6 +29,9 @@ export default function CrewRoster({ crewData, selectedId, selectedSection, blin
               <span className="text-2xl">{member.avatar}</span>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-white truncate">{member.name}</div>
+                <div className="text-[11px] text-gray-400 truncate">
+                  {getEnvironment(member.env).shortName} · {member.task.name}
+                </div>
                 <div className="text-[11px] text-gray-500 font-mono">
                   HR {cv.heart_rate_bpm ?? '—'} · SpO₂ {cv.spo2_pct ?? '—'}
                 </div>

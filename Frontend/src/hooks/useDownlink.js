@@ -10,14 +10,15 @@ function inScheduledOutage(profile, nowMs) {
   return t >= period - outage;
 }
 
-// Telemetry samples recorded onboard that ground has not received yet
+// Telemetry samples recorded onboard in an environment that ground has not received yet
 export function getBufferedSamples(groundData, onboardData, sectionId) {
-  return Object.keys(onboardData).reduce((total, id) => {
-    const received = groundData[id]?.sections[sectionId]?.vitals ?? [];
-    const lastReceived = received[received.length - 1]?.timestamp ?? 0;
-    const onboard = onboardData[id].sections[sectionId].vitals;
-    return total + onboard.filter((v) => v.timestamp > lastReceived).length;
-  }, 0);
+  return Object.values(onboardData)
+    .filter((member) => member.env === sectionId)
+    .reduce((total, member) => {
+      const received = groundData[member.id]?.data.vitals ?? [];
+      const lastReceived = received[received.length - 1]?.timestamp ?? 0;
+      return total + member.data.vitals.filter((v) => v.timestamp > lastReceived).length;
+    }, 0);
 }
 
 function initialLinks(now) {
@@ -56,20 +57,16 @@ function advance(prev, onboard, forced, now) {
     };
   });
 
-  // Ground keeps the last received copy of every phase that is out of contact
-  const groundData = {};
-  Object.entries(onboard).forEach(([id, member]) => {
-    const received = prev.groundData[id] ?? member;
-    groundData[id] = {
-      ...member,
-      sections: Object.fromEntries(
-        SECTIONS.map((sec) => [
-          sec.id,
-          links[sec.id].status === 'aos' ? member.sections[sec.id] : received.sections[sec.id],
-        ])
-      ),
-    };
-  });
+  // Ground keeps the last received copy of every astronaut whose environment is out of contact.
+  // A new task assignment is known on the ground right away (ground issues it).
+  const groundData = Object.fromEntries(
+    Object.entries(onboard).map(([id, member]) => {
+      const received = prev.groundData[id];
+      const upToDate =
+        links[member.env].status === 'aos' || !received || received.taskId !== member.taskId;
+      return [id, upToDate ? member : received];
+    })
+  );
 
   return { groundData, links, now };
 }
