@@ -86,12 +86,12 @@ export default function CrewView({
           </p>
         </div>
         {link.status === 'aos' ? (
-          <span className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-vital-green/40 text-sm text-vital-green">
-            <SatelliteDish size={15} /> Ground link live
+          <span className="flex items-center gap-2 px-4 py-2 rounded-full border border-vital-green/40 text-vital-green">
+            <SatelliteDish size={18} /> Sending vitals to ground automatically
           </span>
         ) : (
-          <span className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-vital-orange/50 text-sm text-vital-orange">
-            <WifiOff size={15} /> No ground link · data saved onboard
+          <span className="flex items-center gap-2 px-4 py-2 rounded-full border border-vital-orange/50 text-vital-orange">
+            <WifiOff size={18} /> No ground link · vitals saved onboard, sent when it returns
           </span>
         )}
       </div>

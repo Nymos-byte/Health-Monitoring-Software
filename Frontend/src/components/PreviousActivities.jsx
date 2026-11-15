@@ -38,7 +38,7 @@ export default function PreviousActivities({ member, records }) {
               <button
                 key={r.key}
                 onClick={() => setSelectedKey(r.key)}
-                className={`px-3 py-1.5 rounded-full text-sm border cursor-pointer transition-colors ${
+                className={`px-5 py-3 rounded-xl text-base border-2 cursor-pointer transition-colors ${
                   r.key === selected.key
                     ? 'bg-nasa-blue/25 border-nasa-blue text-white'
                     : 'border-space-600 text-gray-400 hover:text-white'
