@@ -1,17 +1,10 @@
-import { useState } from 'react';
 import { Siren } from 'lucide-react';
 import { metricDefinitions, getMetricRange } from '../data/mockData';
 import { crewLabels, formatMetricValue, getCrewAdvice } from '../utils/metrics';
 
-// Blocking emergency dialog: it cannot be dismissed until the viewer confirms they are aware
+// Blocking emergency dialog: it can only be dismissed with the acknowledge button
 export default function CriticalAlertModal({ readings, audience, onAcknowledge }) {
-  const [confirmed, setConfirmed] = useState(false);
   if (!readings.length) return null;
-
-  const handleAcknowledge = () => {
-    onAcknowledge(readings.map((r) => r.id));
-    setConfirmed(false);
-  };
 
   return (
     <div
@@ -66,22 +59,9 @@ export default function CriticalAlertModal({ readings, audience, onAcknowledge }
           ))}
         </ul>
 
-        <label className="flex items-start gap-3 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={confirmed}
-            onChange={(e) => setConfirmed(e.target.checked)}
-            className="mt-1 w-5 h-5 accent-vital-red cursor-pointer"
-          />
-          <span className="text-gray-200">
-            I have reviewed this situation and I am attending to the emergency.
-          </span>
-        </label>
-
         <button
-          onClick={handleAcknowledge}
-          disabled={!confirmed}
-          className="w-full py-4 rounded-xl text-lg font-bold transition-colors bg-vital-red text-white enabled:hover:bg-red-500 enabled:cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+          onClick={() => onAcknowledge(readings.map((r) => r.id))}
+          className="w-full py-4 rounded-xl text-lg font-bold transition-colors bg-vital-red text-white hover:bg-red-500 cursor-pointer"
         >
           Acknowledge and view vital signs
         </button>

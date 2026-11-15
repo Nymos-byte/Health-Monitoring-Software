@@ -97,7 +97,6 @@ function App() {
         />
       )}
       <CriticalAlertModal
-        key={unacknowledged.map((r) => r.id).join(',')}
         readings={unacknowledged}
         audience={view}
         onAcknowledge={handleAcknowledgeCritical}
