@@ -10,7 +10,7 @@ indicators, detects risk signals early and tells the astronaut **what is happeni
 
 > ⚠️ **All training data in this repository is SIMULATED.** It is generated from parameters
 > calibrated with NASA Human Research Program (HRP) publications (see [`docs/SOURCES.md`](docs/SOURCES.md)).
-> Every simulated record carries `Origen_Dato = SIMULADO`. The models demonstrate a pipeline that is
+> Every simulated record carries `data_origin = SIMULATED`. The models demonstrate a pipeline that is
 > ready to be retrained on real data (e.g. restricted NASA LSDA/NLSP datasets). They are **not**
 > validated for clinical use.
 
@@ -28,7 +28,7 @@ continuous vital-sign streams. We therefore:
 3. Injected labeled health events and sensor faults (edge cases).
 4. Benchmarked 7 detection approaches, testing always on astronauts never seen in training.
 
-An audit of an earlier set of team CSVs (in [`datos_originales/`](datos_originales/)) showed they
+An audit of an earlier set of team CSVs (in [`data/original/`](data/original/)) showed they
 were independent random columns with no physiological relationships and no labels, so they were
 replaced. See [`docs/DATA_AUDIT.md`](docs/DATA_AUDIT.md).
 
@@ -37,23 +37,23 @@ replaced. See [`docs/DATA_AUDIT.md`](docs/DATA_AUDIT.md).
 ## Repository structure
 
 ```
-├── generador/
-│   ├── generar_datos.py        # Physiological simulator (reproducible with a seed)
-│   └── validar_datos.py        # Consistency checks + quick trainability test
-├── datos_simulados/            # Generated datasets (see datos_simulados/README.md)
-├── modelo/
-│   ├── entrenar_modelos.py     # Benchmark of 7 approaches + final model training
-│   └── entrenados/             # Trained models (.joblib)
-├── resultados/                 # Benchmark results (CSV)
-├── datos_originales/           # Earlier team CSVs (origin unverified, kept for reference)
+├── generator/
+│   ├── generate_data.py        # Physiological simulator (reproducible with a seed)
+│   └── validate_data.py        # Consistency checks + quick trainability test
+├── data/
+│   ├── simulated/              # Generated datasets (see data/simulated/README.md)
+│   └── original/               # Earlier team CSVs (origin unverified, kept for reference)
+├── model/
+│   ├── train_models.py         # Benchmark of 7 approaches + final model training
+│   └── trained/                # Trained models (.joblib)
+├── results/                    # Benchmark results (CSV)
 └── docs/
-    ├── SOURCES.md              # Every NASA/CSA source and how to cite it
-    ├── DATA_AUDIT.md           # Integrity audit of the original CSVs
-    └── Fuentes_NASA_citas.docx # Citation guide (Spanish)
+    ├── SOURCES.md                       # Every NASA/CSA source and how to cite it
+    ├── DATA_AUDIT.md                    # Integrity audit of the original CSVs
+    └── NASA_Sources_Citation_Guide.docx # Citation guide (Word)
 ```
 
-> Code identifiers and column names are in Spanish (the team's working language); all
-> documentation is in English. A column glossary is in [`datos_simulados/README.md`](datos_simulados/README.md).
+A column glossary is in [`data/simulated/README.md`](data/simulated/README.md).
 
 ---
 
@@ -65,22 +65,22 @@ Requires Python 3.10+.
 pip install -r requirements.txt
 
 # 1. Generate simulated data (24 astronauts, seed 42)
-python generador/generar_datos.py --astronautas 24 --semilla 42
+python generator/generate_data.py --astronauts 24 --seed 42
 
 # 2. Validate consistency
-python generador/validar_datos.py
+python generator/validate_data.py
 
 # 3. Benchmark all models and train the final ones (~4 minutes)
-python modelo/entrenar_modelos.py
+python model/train_models.py
 ```
 
 Load a trained model:
 
 ```python
 import joblib
-bundle = joblib.load("modelo/entrenados/modelo_eva.joblib")
-model, features = bundle["modelo"], bundle["variables"]
-# features must be built with variables_eva() / variables_diarias() from modelo/entrenar_modelos.py
+bundle = joblib.load("model/trained/eva_model.joblib")
+model, features = bundle["model"], bundle["features"]
+# features must be built with eva_features() / daily_features() from model/train_models.py
 ```
 
 ---
@@ -105,11 +105,11 @@ density, etc.) and goes through a full mission:
 **Labeled events.** Daily data includes dehydration, sleep deprivation, infection,
 isolation stress and solar particle events. EVA data includes mild hypoxia, CO₂ scrubber failure,
 overexertion and suit pressure leaks. Events ramp up, peak and resolve, which makes early detection
-measurable. Each row has `Evento`, `Intensidad_Evento` (0–1) and `Nivel_Riesgo` (0 normal,
+measurable. Each row has `event`, `event_intensity` (0–1) and `risk_level` (0 normal,
 1 caution, 2 critical).
 
 **Edge cases.** About 1.5% of the data is missing, there are motion-artifact spikes, and launch and
-re-entry are stressful but normal phases. These are labeled in `Artefacto_Sensor` and do **not**
+re-entry are stressful but normal phases. These are labeled in `sensor_artifact` and do **not**
 change the event label, so the model must learn to ignore them.
 
 ---
@@ -125,7 +125,7 @@ tested on unseen crew members. The benchmark was repeated on **3 independent sim
 | Model | Risk F1 | Critical recall | Episodes detected | False alarms | FA on sensor spikes | FA on launch/re-entry |
 |---|---|---|---|---|---|---|
 | **Gradient Boosting** ✅ | **0.71 ± 0.01** | 76% | 90% | 2% | 2% | 1% |
-| MLP neural network | 0.72 ± 0.03 | 76% | 94% | 2% | 2% | 0% |
+| MLP neural network | 0.72 ± 0.02 | 76% | 93% | 2% | 2% | 0% |
 | Random Forest | 0.70 ± 0.02 | 75% | 86% | 2% | 0% | 0% |
 | Threshold rules | 0.54 ± 0.02 | 74% | 84% | 4% | 20% | 12% |
 | Logistic regression | 0.44 ± 0.01 | 94% | 100% | 46% | 85% | 0% |
@@ -139,18 +139,18 @@ tested on unseen crew members. The benchmark was repeated on **3 independent sim
 | **Gradient Boosting** ✅ | **0.93 ± 0.00** | 97% | 15 min | 0.4% | 0.89 |
 | Random Forest | 0.93 ± 0.01 | 98% | 15 min | 0.2% | 0.91 |
 | Logistic regression | 0.91 ± 0.02 | 100% | 10 min | 3% | 0.93 |
-| MLP neural network | 0.86 ± 0.04 | 87% | 30 min | 0.3% | 0.74 |
+| MLP neural network | 0.88 ± 0.01 | 93% | 22.5 min | 1% | 0.85 |
 | Threshold rules | 0.86 ± 0.02 | 100% | 20 min | 0.04% | — |
 | Isolation Forest | 0.77 ± 0.05 | 85% | 25 min | 5% | — |
 | Personal-baseline z-score | 0.66 ± 0.08 | 71% | 25 min | 5% | — |
 
-Full metrics are in [`resultados/`](resultados/). They include early-detection recall, AUC-PR and
+Full metrics are in [`results/`](results/). They include early-detection recall, AUC-PR and
 F1 on rows with missing data.
 
 ### Why Gradient Boosting
 
 - **Most stable across populations.** In the daily data the MLP is +0.01 F1 higher, but that is
-  smaller than its own variability (±0.03). The selection rule is: among models within 0.02 F1 of
+  within its own variability (±0.02). The selection rule is: among models within 0.02 F1 of
   the best, pick the lowest standard deviation.
 - **Robust to edge cases.** It raises 2% false alarms on sensor spikes, against 20% for fixed
   thresholds. It is also not fooled by launch and re-entry stress.
@@ -178,8 +178,8 @@ F1 on rows with missing data.
 
 - The results measure how well the models learn the simulator's patterns, **not real-world
   clinical performance**.
-- Parameters marked `POR VERIFICAR` ("to be verified") in
-  [`datos_simulados/parametros_fuentes.csv`](datos_simulados/parametros_fuentes.csv) do not have a
+- Parameters marked `TO BE VERIFIED` in
+  [`data/simulated/parameters_sources.csv`](data/simulated/parameters_sources.csv) do not have a
   NASA citation yet.
 - The models need validation on real astronaut or analog data (bed rest, HERA) before any
   operational use.

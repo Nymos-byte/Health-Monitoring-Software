@@ -1,0 +1,12 @@
+mission_environment,associated_hazard,health_metric,unit,impact_and_clinical_rationale,recommended_countermeasure
+Space Station,Microgravity,Bone Mineral Density (DXA T-score),Standard deviations,Space osteoporosis monitoring (risk if T-score < -2.5),Resistance exercise (ARED)
+Space Station,Microgravity,Vitamin D (25-OH),ng/ml,Decalcification control; optimal range is 35-90 ng/ml,"Daily supplementation of 1,000 IU or weekly 5,000 IU"
+Space Station,Microgravity,"Immune Biomarkers (hs-CRP, IL-1ra)",mg/L,Measurement of oxidative stress and chronic systemic inflammation,Nutritional changes and periodic testing
+Space Station,Microgravity,Vascular Flow (Ultrasound),Images/Velocity,Risk of venous thromboembolism (VTE) in the internal jugular vein,Telemedicine-guided surveillance (e.g. Tempus Pro)
+Spacecraft (Transit),Altered Gravity,Blood Pressure and Heart Rate,mmHg / bpm,Body fluid shift; orthostatic intolerance on reconditioning,Lower-body compression garments (GCG) / Pre-descent fluid loading
+Spacecraft (Transit),Isolation and Confinement,Sleep Hours and Circadian Rhythm,Hours,Biological clock misalignment increases the risk of psychosocial problems,Cabin lighting synchronization and routine control
+Exploration Vehicle (EVA),Hostile Environments (Closed Suit),Oxygen Saturation and Pressure,% O2 / psia,Risk of mild hypoxia and decompression sickness due to pressure differences,Pre-breathe protocols and automated suit alerts
+Exploration Vehicle (EVA),Hostile Environments,Metabolic Load and Exertion,Heart Rate (bpm),"Severe physical fatigue, dynamic-load joint injuries",Real-time monitoring of peak physical exertion
+Planetary/Lunar Base,Space Radiation (GCR / SPE),Radiation Dosimetry,Gy / mGy,Exposures > 0.5 Gy increase the risk of degenerative tissue damage and cataracts,Cumulative dose monitoring; antioxidant diet development
+Planetary/Lunar Base,Distance from Earth,Communication Delay,Minutes,Real-time medical intervention from Earth is impossible,Fully autonomous medical software with 'just-in-time' training
+Planetary/Lunar Base,Space Radiation + Gravity,Long-Term Cardiovascular Health,ECG / Lipid profile,Risk of atherosclerosis and arrhythmias from combined chronic exposure,Assessment with predictive algorithms (e.g. Astro-CHARM)

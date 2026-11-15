@@ -1,17 +1,18 @@
 # Integrity audit of the original datasets
 
-The files in [`../datos_originales/`](../datos_originales/) were the team's first datasets. Their
+The files in [`../data/original/`](../data/original/) were the team's first datasets. Their
 origin has not been verified, so **they must not be presented as NASA measurements**.
+Column headers and category values were translated to English; every number is unchanged.
 
 ## Files
 
 | File | Rows | Content |
 |---|---|---|
-| `dataset_tierra_preflight.csv` | 1,500 | Pre-flight vitals, hip T-score, vitamin D, left-ventricular mass |
-| `dataset_nave_espacial.csv` | 1,500 | Spacecraft vitals with flight phase |
-| `dataset_estacion_espacial.csv` | 1,500 | Station vitals, cumulative radiation, T-score, ventricular mass |
-| `dataset_eva_vehiculo.csv` | 1,500 | EVA vitals, suit pressure, suit CO₂ |
-| `dataset_indicadores_salud_espacial_nasa.csv` | 11 | Reference table: environment, hazard, metric, unit, threshold, countermeasure |
+| `dataset_earth_preflight.csv` | 1,500 | Pre-flight vitals, hip T-score, vitamin D, left-ventricular mass |
+| `dataset_spacecraft.csv` | 1,500 | Spacecraft vitals with flight phase |
+| `dataset_space_station.csv` | 1,500 | Station vitals, cumulative radiation, T-score, ventricular mass |
+| `dataset_eva_vehicle.csv` | 1,500 | EVA vitals, suit pressure, suit CO₂ |
+| `dataset_space_health_indicators_nasa.csv` | 11 | Reference table: environment, hazard, metric, unit, threshold, countermeasure |
 
 ## What passed
 
@@ -42,5 +43,5 @@ origin has not been verified, so **they must not be presented as NASA measuremen
 - The four files are independent populations, not the same people across mission phases.
 
 A model trained on these files would learn noise. They were replaced by the calibrated simulator
-in [`../generador/`](../generador/). The reference table `dataset_indicadores_salud_espacial_nasa.csv`
+in [`../generator/`](../generator/). The reference table `dataset_space_health_indicators_nasa.csv`
 is still useful as a rules and threshold table, but each threshold needs a primary-source citation.

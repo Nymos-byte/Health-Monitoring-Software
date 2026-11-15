@@ -1,0 +1,14 @@
+parameter,value,unit,source
+bone_loss_per_month_min,1.0,% BMD/month,NASA HRP - Risk of Spaceflight-Induced Bone Changes: https://www.nasa.gov/reference/risk-of-spaceflight-induced-bone-changes/
+bone_loss_per_month_max,1.5,% BMD/month,Same source
+t_score_per_pct_bmd,0.083,SD per 1% BMD,TO BE VERIFIED - approx. 1 SD of hip BMD ~ 12% of the mean
+exercise_hours_per_day,1.5,h/day,NASA HRP - Risk of Reduced Cardiorespiratory and Musculoskeletal Fitness: https://www.nasa.gov/reference/risk-of-reduced-cardiorespiratory-and-musculoskeletal-fitness/
+osteoporosis_t_score_threshold,-2.5,SD,dataset_space_health_indicators_nasa.csv (cite original source)
+vitamin_d_optimal_range,35-90,ng/ml,dataset_space_health_indicators_nasa.csv (cite original source)
+suit_pressure_psia,4.3,psia,Team dataset_eva_vehicle.csv / TO BE VERIFIED against NASA EVA docs
+station_daily_dose,0.25-0.45,mGy/day,TO BE VERIFIED - radiation Evidence Report
+inflight_hr_shift,3.7,bpm,Earth vs. Station mean difference in team datasets / TO BE VERIFIED with Cardio Evidence Book
+inflight_systolic_shift,4.5,mmHg,Same as above
+inflight_sleep_shift,-1.1,h,Same as above; see Risk from Inadequate Sleep: https://www.nasa.gov/reference/risk-from-inadequate-sleep-and-irregular-schedules/
+lv_mass_loss_180d,7.2,%,Trend in team dataset_space_station.csv / TO BE VERIFIED
+pvt_ms_per_hour_deficit,18,ms/h,TO BE VERIFIED - PVT and sleep deprivation literature
