@@ -13,7 +13,13 @@ import {
   Heart,
   Gauge,
 } from 'lucide-react';
-import { SECTIONS, metricDefinitions, getMetricRange, getVitalContext } from '../data/mockData';
+import {
+  SECTIONS,
+  metricDefinitions,
+  getMetricRange,
+  getVitalContext,
+  COMBINED_RULES,
+} from '../data/mockData';
 import { getVitalStatus, getStatusColor } from './helpers';
 
 export const metricIcons = {
@@ -107,7 +113,22 @@ function isConfirmedCritical(key, current, history, sectionId, context) {
   );
 }
 
-// Confirmed critical readings, optionally limited to one astronaut and/or phase
+function outOfRangeMetrics(rule, sample, sectionId, context) {
+  return rule.metrics.filter(
+    (key) => getVitalStatus(key, sample[key], sectionId, context) !== 'nominal'
+  );
+}
+
+function isConfirmedCombination(rule, current, history, sectionId, context) {
+  const samples = [current, ...history.slice(-(CRITICAL_CONFIRM_SAMPLES - 1))];
+  return (
+    samples.length === CRITICAL_CONFIRM_SAMPLES &&
+    samples.every((v) => outOfRangeMetrics(rule, v, sectionId, context).length >= rule.min)
+  );
+}
+
+// Confirmed emergencies (single critical readings and combined rules),
+// optionally limited to one astronaut and/or phase
 export function getCriticalReadings(crewData, { astronautId, sectionId } = {}) {
   const readings = [];
   Object.values(crewData).forEach((member) => {
@@ -116,16 +137,22 @@ export function getCriticalReadings(crewData, { astronautId, sectionId } = {}) {
       if (sectionId && sec.id !== sectionId) return;
       const { currentVitals: vitals, vitals: history } = member.sections[sec.id];
       const context = getVitalContext(member, vitals);
+      const base = { member, section: sec, vitals, context };
+
       sec.metrics.forEach((key) => {
         if (metricDefinitions[key].isCategorical) return;
         if (!isConfirmedCritical(key, vitals[key], history, sec.id, context)) return;
+        readings.push({ ...base, id: criticalKey(member.id, sec.id, key), metricKeys: [key] });
+      });
+
+      COMBINED_RULES.forEach((rule) => {
+        if (!rule.metrics.every((key) => sec.metrics.includes(key))) return;
+        if (!isConfirmedCombination(rule, vitals, history, sec.id, context)) return;
         readings.push({
-          id: criticalKey(member.id, sec.id, key),
-          member,
-          section: sec,
-          metricKey: key,
-          vitals,
-          context,
+          ...base,
+          id: criticalKey(member.id, sec.id, rule.id),
+          metricKeys: outOfRangeMetrics(rule, vitals, sec.id, context),
+          rule,
         });
       });
     });
@@ -133,9 +160,9 @@ export function getCriticalReadings(crewData, { astronautId, sectionId } = {}) {
   return readings;
 }
 
-// Card outline: green when normal, orange when out of range, red when critical
-// (blinking until someone acknowledges it)
+// Card outline: green when normal, orange when out of range, red when critical.
+// Any reading that is part of an unacknowledged emergency blinks red.
 export function getStatusOutline(status, isBlinking) {
-  if (status === 'critical' && isBlinking) return { className: 'blink-critical', style: {} };
+  if (isBlinking) return { className: 'blink-critical', style: {} };
   return { className: '', style: { borderColor: getStatusColor(status) } };
 }

@@ -1,4 +1,4 @@
-import { getMetricRange, SECTIONS } from '../data/mockData';
+import { getMetricRange, SECTIONS, COMBINED_RULES } from '../data/mockData';
 
 // context: { activity, age } so exertion-dependent limits can be applied (see getMetricRange)
 export function getVitalStatus(vitalName, value, sectionId = 'space_station', context = {}) {
@@ -32,7 +32,14 @@ export function determineSectionStatus(vitals, sectionId, age) {
     else if (status === 'caution') hasCaution = true;
   }
 
-  if (hasCritical) return 'critical';
+  // Several readings out of range together count as critical (see COMBINED_RULES)
+  const combined = COMBINED_RULES.some(
+    (rule) =>
+      rule.metrics.every((key) => section.metrics.includes(key)) &&
+      rule.metrics.filter((key) => getVitalStatus(key, vitals[key], sectionId, context) !== 'nominal')
+        .length >= rule.min
+  );
+  if (hasCritical || combined) return 'critical';
   if (hasCaution) return 'caution';
   return 'nominal';
 }

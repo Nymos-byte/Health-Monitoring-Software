@@ -5,7 +5,7 @@ import CrewView from './views/CrewView';
 import CriticalAlertModal from './components/CriticalAlertModal';
 import { generateCrewData, initialAlerts } from './data/mockData';
 import { useRealtimeVitals } from './hooks/useRealtimeVitals';
-import { getCriticalReadings } from './utils/metrics';
+import { getCriticalReadings, criticalKey } from './utils/metrics';
 
 // Each view has its own URL so it can be opened on a separate screen: #/ground or #/crew
 function getViewFromHash() {
@@ -29,7 +29,12 @@ function App() {
       ? getCriticalReadings(crewData, { astronautId: selectedAstronaut, sectionId: selectedSection })
       : getCriticalReadings(crewData);
   const unacknowledged = criticalReadings.filter((r) => !acknowledged.has(`${view}|${r.id}`));
-  const blinking = new Set(unacknowledged.map((r) => r.id));
+  // Every reading involved in an unacknowledged emergency blinks
+  const blinking = new Set(
+    unacknowledged.flatMap((r) =>
+      r.metricKeys.map((key) => criticalKey(r.member.id, r.section.id, key))
+    )
+  );
 
   // Once a reading leaves the critical zone, forget its acknowledgement so a new episode alarms again
   const allCriticalIds = getCriticalReadings(crewData).map((r) => r.id).join(',');

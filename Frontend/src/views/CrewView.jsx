@@ -9,6 +9,7 @@ import {
   formatMetricValue,
   criticalKey,
   getStatusOutline,
+  getCriticalReadings,
 } from '../utils/metrics';
 
 const crewStatusLabel = { nominal: 'Normal', caution: 'Watch', critical: 'Alert' };
@@ -46,6 +47,12 @@ export default function CrewView({
   const secondaryIssues = issues.filter((i) => secondary.includes(i.key)).length;
   const isBlinking = (key) => blinking.has(criticalKey(selectedAstronaut, selectedSection, key));
   const emergencyActive = emergencies.has(`${selectedAstronaut}:${selectedSection}`);
+  const activeRules = getCriticalReadings(crewData, {
+    astronautId: selectedAstronaut,
+    sectionId: selectedSection,
+  })
+    .map((r) => r.rule)
+    .filter(Boolean);
 
   if (!member) return null;
 
@@ -64,7 +71,13 @@ export default function CrewView({
         </div>
       </div>
 
-      <StatusBanner issues={issues} vitals={vitals} sectionId={selectedSection} context={context} />
+      <StatusBanner
+        issues={issues}
+        rules={activeRules}
+        vitals={vitals}
+        sectionId={selectedSection}
+        context={context}
+      />
 
       {/* Essential readings */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -150,7 +163,7 @@ export default function CrewView({
   );
 }
 
-function StatusBanner({ issues, vitals, sectionId, context }) {
+function StatusBanner({ issues, rules, vitals, sectionId, context }) {
   if (issues.length === 0) {
     return (
       <div className="flex items-center gap-4 p-5 rounded-2xl bg-vital-green/10 border border-vital-green/40">
@@ -163,7 +176,8 @@ function StatusBanner({ issues, vitals, sectionId, context }) {
     );
   }
 
-  const top = issues[0].status;
+  // A combined-sign emergency outranks its individual (orange) readings
+  const top = rules.length ? 'critical' : issues[0].status;
   const color = getStatusColor(top);
   const Icon = top === 'critical' ? AlertOctagon : AlertTriangle;
 
@@ -179,6 +193,12 @@ function StatusBanner({ issues, vitals, sectionId, context }) {
         </p>
       </div>
       <ul className="space-y-2">
+        {rules.map((rule) => (
+          <li key={rule.id} className="flex flex-wrap items-baseline gap-x-3 text-lg">
+            <span className="font-semibold text-vital-red">{rule.label}</span>
+            <span className="text-gray-200">{rule.advice}</span>
+          </li>
+        ))}
         {issues.map(({ key, status }) => (
           <li key={key} className="flex flex-wrap items-baseline gap-x-3 text-lg">
             <span className="font-semibold" style={{ color: getStatusColor(status) }}>

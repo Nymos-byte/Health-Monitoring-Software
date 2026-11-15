@@ -36,34 +36,34 @@ export default function CriticalAlertModal({ readings, audience, onAcknowledge }
         </div>
 
         <ul className="space-y-3">
-          {readings.map(({ id, member, section, metricKey, vitals, context }) => {
-            const def = metricDefinitions[metricKey];
-            const range = getMetricRange(metricKey, section.id, context);
-            const tooHigh = vitals[metricKey] >= range.criticalHigh;
-            return (
-              <li key={id} className="p-4 rounded-xl bg-vital-red/10 border border-vital-red/40">
-                {audience === 'ground' && (
-                  <p className="text-sm text-gray-400 mb-1">
-                    {member.avatar} {member.name} · {section.name}
+          {readings.map(({ id, member, section, metricKeys, rule, vitals, context }) => (
+            <li key={id} className="p-4 rounded-xl bg-vital-red/10 border border-vital-red/40">
+              {audience === 'ground' && (
+                <p className="text-sm text-gray-400 mb-1">
+                  {member.avatar} {member.name} · {section.name}
+                </p>
+              )}
+              {rule ? (
+                <>
+                  <p className="text-xl font-bold text-white">{rule.label}</p>
+                  <p className="text-sm text-gray-400 font-mono">
+                    {metricKeys
+                      .map((key) => `${crewLabels[key]} ${formatMetricValue(key, vitals)} ${metricDefinitions[key].unit}`)
+                      .join(' · ')}
                   </p>
-                )}
-                <p className="text-xl font-bold text-white">
-                  {crewLabels[metricKey]}{' '}
-                  <span className="font-mono text-vital-red">
-                    {formatMetricValue(metricKey, vitals)} {def.unit}
-                  </span>
-                </p>
-                <p className="text-sm text-gray-400 font-mono">
-                  Critical limit: {tooHigh ? `≥ ${range.criticalHigh}` : `≤ ${range.criticalLow}`} {def.unit}
-                  {range.adjustedFor && ` (adjusted for ${range.adjustedFor.toLowerCase()} activity)`}
-                </p>
-                <p className="mt-2 text-gray-100">
-                  {audience === 'ground' && <span className="text-gray-400">Crew instruction: </span>}
-                  {getCrewAdvice(metricKey, vitals[metricKey], section.id, context)}
-                </p>
-              </li>
-            );
-          })}
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Several readings out of range at the same time
+                  </p>
+                </>
+              ) : (
+                <SingleReading metricKey={metricKeys[0]} section={section} vitals={vitals} context={context} />
+              )}
+              <p className="mt-2 text-gray-100">
+                {audience === 'ground' && <span className="text-gray-400">Crew instruction: </span>}
+                {rule ? rule.advice : getCrewAdvice(metricKeys[0], vitals[metricKeys[0]], section.id, context)}
+              </p>
+            </li>
+          ))}
         </ul>
 
         <label className="flex items-start gap-3 cursor-pointer select-none">
@@ -87,5 +87,25 @@ export default function CriticalAlertModal({ readings, audience, onAcknowledge }
         </button>
       </div>
     </div>
+  );
+}
+
+function SingleReading({ metricKey, section, vitals, context }) {
+  const def = metricDefinitions[metricKey];
+  const range = getMetricRange(metricKey, section.id, context);
+  const tooHigh = vitals[metricKey] >= range.criticalHigh;
+  return (
+    <>
+      <p className="text-xl font-bold text-white">
+        {crewLabels[metricKey]}{' '}
+        <span className="font-mono text-vital-red">
+          {formatMetricValue(metricKey, vitals)} {def.unit}
+        </span>
+      </p>
+      <p className="text-sm text-gray-400 font-mono">
+        Critical limit: {tooHigh ? `≥ ${range.criticalHigh}` : `≤ ${range.criticalLow}`} {def.unit}
+        {range.adjustedFor && ` (adjusted for ${range.adjustedFor.toLowerCase()} activity)`}
+      </p>
+    </>
   );
 }

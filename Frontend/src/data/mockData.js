@@ -429,6 +429,39 @@ export function getMetricRange(metricKey, sectionId = 'space_station', context =
   return base;
 }
 
+// Several readings out of range together can be an emergency even if none is critical alone.
+// A rule fires when at least `min` of its metrics are out of range for the confirmation window.
+export const COMBINED_RULES = [
+  {
+    id: 'suit-integrity',
+    label: 'Possible suit failure',
+    metrics: ['suit_pressure_psia', 'suit_co2_ppm', 'spo2_pct'],
+    min: 2,
+    advice: 'Stop work and return to the airlock. Check suit seals and CO₂ scrubber.',
+  },
+  {
+    id: 'heat-stress',
+    label: 'Heat stress',
+    metrics: ['body_temp_c', 'heart_rate_bpm'],
+    min: 2,
+    advice: 'Stop activity, increase cooling and drink water.',
+  },
+  {
+    id: 'hypoxia',
+    label: 'Possible hypoxia',
+    metrics: ['spo2_pct', 'heart_rate_bpm'],
+    min: 2,
+    advice: 'Stop activity, breathe steadily and check the O₂ supply.',
+  },
+  {
+    id: 'cardiovascular',
+    label: 'Cardiovascular strain',
+    metrics: ['heart_rate_bpm', 'systolic_bp_mmhg'],
+    min: 2,
+    advice: 'Stop activity, rest and report any symptoms.',
+  },
+];
+
 export function getVitalContext(member, vitals) {
   return { activity: vitals?.activity_level, age: member?.age };
 }
