@@ -142,10 +142,12 @@ export const TASKS = [
   { id: 'iss_maintenance', environment: 'space_station', name: 'Station maintenance', activity: 'Moderate' },
   { id: 'iss_exercise', environment: 'space_station', name: 'ARED resistance exercise', activity: 'Intense' },
   { id: 'iss_eva', environment: 'space_station', name: 'Spacewalk (EVA)', activity: 'Intense', eva: true, evaLocation: 'Station' },
+  { id: 'iss_eva_support', environment: 'space_station', name: 'EVA support (inside)', activity: 'Light' },
 
   { id: 'base_habitat', environment: 'planetary_base', name: 'Habitat operations', activity: 'Light' },
   { id: 'base_rover', environment: 'planetary_base', name: 'Rover traverse', activity: 'Moderate' },
   { id: 'base_eva', environment: 'planetary_base', name: 'Surface EVA', activity: 'Intense', eva: true, evaLocation: 'Lunar surface' },
+  { id: 'base_eva_support', environment: 'planetary_base', name: 'EVA support (habitat)', activity: 'Light' },
   { id: 'base_rest', environment: 'planetary_base', name: 'Rest period', activity: 'Rest' },
 
   { id: 'post_medical', environment: 'earth_postflight', name: 'Post-flight medical check', activity: 'Rest' },
@@ -171,6 +173,36 @@ export function getTaskPrimaryMetrics(task) {
   return task.eva ? EVA_PRIMARY_METRICS : getEnvironment(task.environment).primaryMetrics;
 }
 
+// A crew flies a mission together: everyone in a mission goes through the same phase at the
+// same time, and the phase decides which environments (and so which tasks) are possible.
+// Within a phase the crew splits into tasks; spacewalks are done in pairs (buddy system).
+export const MISSION_PHASES = {
+  preflight: { label: 'Pre-flight', environments: ['earth_preflight'], defaultTask: 'pre_sim' },
+  launch: { label: 'Launch', environments: ['spacecraft'], defaultTask: 'sc_launch' },
+  transit: { label: 'Transit', environments: ['spacecraft'], defaultTask: 'sc_piloting' },
+  station: { label: 'Station operations', environments: ['space_station'], defaultTask: 'iss_science' },
+  // Lunar surface: landers work in the base, the vehicle stays available in orbit
+  surface: { label: 'Surface operations', environments: ['planetary_base', 'spacecraft'], defaultTask: 'base_habitat' },
+  return: { label: 'Re-entry', environments: ['spacecraft'], defaultTask: 'sc_reentry' },
+  postflight: { label: 'Recovery', environments: ['earth_postflight'], defaultTask: 'post_medical' },
+};
+
+// Phases in mission order; a mission only moves forward
+export const MISSION_TYPES = {
+  ISS: ['preflight', 'launch', 'transit', 'station', 'return', 'postflight'],
+  Lunar: ['preflight', 'launch', 'transit', 'surface', 'return', 'postflight'],
+};
+
+export const MISSIONS = [
+  { id: 'exp-74', name: 'Expedition 74', type: 'ISS', phase: 'station' },
+  { id: 'selene-2', name: 'Selene-2', type: 'Lunar', phase: 'surface' },
+  { id: 'exp-73', name: 'Expedition 73', type: 'ISS', phase: 'postflight' },
+];
+
+export function getMission(missionId) {
+  return MISSIONS.find((m) => m.id === missionId);
+}
+
 export const crewMembers = [
   {
     id: 'ast-001',
@@ -180,7 +212,8 @@ export const crewMembers = [
     age: 42,
     nationality: 'United Kingdom',
     avatar: '👩‍🚀',
-    defaultTask: 'sc_piloting',
+    missionId: 'exp-74',
+    defaultTask: 'iss_eva',
   },
   {
     id: 'ast-002',
@@ -190,7 +223,8 @@ export const crewMembers = [
     age: 38,
     nationality: 'United States',
     avatar: '👨‍🚀',
-    defaultTask: 'base_habitat',
+    missionId: 'exp-74',
+    defaultTask: 'iss_eva_support',
   },
   {
     id: 'ast-003',
@@ -200,6 +234,7 @@ export const crewMembers = [
     age: 35,
     nationality: 'Japan',
     avatar: '👩‍🚀',
+    missionId: 'exp-74',
     defaultTask: 'iss_eva',
   },
   {
@@ -210,7 +245,30 @@ export const crewMembers = [
     age: 45,
     nationality: 'Russia',
     avatar: '👨‍🚀',
+    missionId: 'exp-73',
     defaultTask: 'post_rehab',
+  },
+  {
+    id: 'ast-005',
+    astronautId: 'AST-05',
+    name: 'Eng. Lucas Moreau',
+    role: 'Mission Commander & Pilot',
+    age: 44,
+    nationality: 'France',
+    avatar: '👨‍🚀',
+    missionId: 'selene-2',
+    defaultTask: 'base_habitat',
+  },
+  {
+    id: 'ast-006',
+    astronautId: 'AST-06',
+    name: 'Dr. Amara Okafor',
+    role: 'Mission Specialist (Geologist)',
+    age: 39,
+    nationality: 'Nigeria',
+    avatar: '👩‍🚀',
+    missionId: 'selene-2',
+    defaultTask: 'base_habitat',
   },
 ];
 
@@ -592,7 +650,7 @@ const scenarios = {
     vitamin_d_ng_ml: 44.5,
   },
   // Lunar habitat at 8.2 psia: slightly lower saturation is expected
-  'ast-002:base_habitat': { spo2_pct: 96.4 },
+  'ast-006:base_habitat': { spo2_pct: 96.4 },
 };
 
 function round(value, decimals) {
@@ -698,13 +756,24 @@ const DAY_MS = 86400000;
 // Sessions already completed before the monitoring starts, consistent with where each
 // astronaut is now (e.g. whoever is in transit has done the pre-flight baseline exam)
 const completedSessions = [
-  { astronautId: 'ast-001', taskId: 'pre_medical', daysAgo: 17 },
-  { astronautId: 'ast-001', taskId: 'pre_fitness', daysAgo: 16 },
-  { astronautId: 'ast-001', taskId: 'sc_launch', daysAgo: 2 },
-  { astronautId: 'ast-002', taskId: 'pre_medical', daysAgo: 40 },
-  { astronautId: 'ast-002', taskId: 'base_eva', daysAgo: 3 },
-  { astronautId: 'ast-003', taskId: 'pre_medical', daysAgo: 140 },
-  { astronautId: 'ast-003', taskId: 'iss_exercise', daysAgo: 1 },
+  // Expedition 74 flew together: same exams, launch and docking, then station work
+  ...['ast-001', 'ast-002', 'ast-003'].flatMap((astronautId) => [
+    { astronautId, taskId: 'pre_medical', daysAgo: 160 },
+    { astronautId, taskId: 'sc_launch', daysAgo: 127 },
+    { astronautId, taskId: 'sc_docking', daysAgo: 126 },
+  ]),
+  { astronautId: 'ast-001', taskId: 'iss_exercise', daysAgo: 1 },
+  { astronautId: 'ast-002', taskId: 'iss_maintenance', daysAgo: 1 },
+  { astronautId: 'ast-003', taskId: 'iss_science', daysAgo: 2 },
+  // Selene-2: both surface crew members did their first lunar EVA together
+  ...['ast-005', 'ast-006'].flatMap((astronautId) => [
+    { astronautId, taskId: 'pre_medical', daysAgo: 60 },
+    { astronautId, taskId: 'sc_launch', daysAgo: 21 },
+    { astronautId, taskId: 'base_eva', daysAgo: 3 },
+  ]),
+  // Expedition 73 is back on Earth
+  { astronautId: 'ast-004', taskId: 'pre_medical', daysAgo: 240 },
+  { astronautId: 'ast-004', taskId: 'sc_launch', daysAgo: 206 },
   { astronautId: 'ast-004', taskId: 'iss_science', daysAgo: 8 },
   { astronautId: 'ast-004', taskId: 'sc_reentry', daysAgo: 5 },
 ];
@@ -763,17 +832,17 @@ export const initialAlerts = [
     id: 'alert-5',
     section: 'planetary_base',
     severity: 'info',
-    astronaut: 'Dr. Daniel Whitaker',
+    astronaut: 'Dr. Amara Okafor',
     message: 'Habitat at 8.2 psia / 34% O₂: SpO₂ around 96% is expected (hypobaric adaptation). Alert threshold 94.5%',
     timestamp: new Date(Date.now() - 5400000).toISOString(),
     acknowledged: false,
   },
   {
     id: 'alert-6',
-    section: 'spacecraft',
+    section: 'space_station',
     severity: 'info',
     astronaut: 'Eng. Charlotte Hayes',
-    message: 'Transit day 2: cabin lighting set to the circadian schedule to protect sleep before docking',
+    message: 'EVA #2 buddy pair: Hayes & Sato outside, Whitaker on EVA support inside (procedures and robotic arm)',
     timestamp: new Date(Date.now() - 7200000).toISOString(),
     acknowledged: true,
   },
@@ -957,4 +1026,6 @@ export const bodyCamStreams = {
   'ast-002': null,
   'ast-003': null,
   'ast-004': null,
+  'ast-005': null,
+  'ast-006': null,
 };

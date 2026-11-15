@@ -4,10 +4,11 @@ import {
   getMemberStatus,
   calculateHealthScore,
 } from '../utils/helpers';
-import { getEnvironment } from '../data/mockData';
+import { getEnvironment, MISSION_PHASES } from '../data/mockData';
+import { getEvaPartners } from '../utils/missions';
 import TaskSelect from './TaskSelect';
 
-export default function AstronautProfile({ member, crewData, records, onAssignTask }) {
+export default function AstronautProfile({ member, crewData, records, missions, onAssignTask }) {
   if (!member) return null;
 
   const cv = member.data.currentVitals;
@@ -15,8 +16,11 @@ export default function AstronautProfile({ member, crewData, records, onAssignTa
   const status = getMemberStatus(member);
   const statusColor = getStatusColor(status);
   const healthScore = calculateHealthScore(member);
+  const mission = missions[member.missionId];
+  const partners = getEvaPartners(member, crewData);
 
   const facts = [
+    `${mission.name} · ${MISSION_PHASES[mission.phase].label}`,
     member.role,
     `${member.age} yrs · ${member.nationality}`,
     env.missionDayLabel,
@@ -46,11 +50,19 @@ export default function AstronautProfile({ member, crewData, records, onAssignTa
             astronautId={member.id}
             crewData={crewData}
             records={records}
+            missions={missions}
           />
           <span className="text-xs text-gray-500">
             ({env.name} · {member.task.activity} activity)
           </span>
         </label>
+        {member.task.eva && (
+          <p className={`mt-1 text-xs ${partners.length ? 'text-gray-400' : 'text-vital-orange'}`}>
+            {partners.length
+              ? `EVA partner: ${partners.map((p) => p.name).join(', ')}`
+              : 'EVA without a partner — spacewalks are done in pairs; assign a crewmate'}
+          </p>
+        )}
       </div>
       <div className="text-right shrink-0">
         <div className="text-3xl font-bold font-mono" style={{ color: statusColor }}>

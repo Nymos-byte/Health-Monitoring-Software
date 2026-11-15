@@ -38,6 +38,8 @@ export default function GroundView({
   onSelectSection,
   onSelectAstronaut,
   onAssignTask,
+  missions,
+  onAdvancePhase,
   onAcknowledge,
   blinking,
   emergencies,
@@ -88,6 +90,7 @@ export default function GroundView({
         <aside className="space-y-5 lg:sticky lg:top-20">
           <CrewRoster
             crewData={crewData}
+            missions={missions}
             selectedId={focused?.id}
             blinking={blinking}
             onSelect={onSelectAstronaut}
@@ -105,6 +108,8 @@ export default function GroundView({
               member={focused}
               crewData={crewData}
               records={records}
+              missions={missions}
+              onAdvancePhase={onAdvancePhase}
               recordsPanel={recordsPanel}
               tab={tab}
               onChangeTab={onChangeTab}
@@ -122,6 +127,7 @@ export default function GroundView({
               envId={selectedSection}
               crewData={crewData}
               records={records}
+              missions={missions}
               recordsPanel={recordsPanel}
               onAssignTask={onAssignTask}
             />
@@ -137,6 +143,8 @@ function AstronautDetail({
   member,
   crewData,
   records,
+  missions,
+  onAdvancePhase,
   recordsPanel,
   tab,
   onChangeTab,
@@ -168,6 +176,7 @@ function AstronautDetail({
         member={member}
         crewData={crewData}
         records={records}
+        missions={missions}
         onAssignTask={onAssignTask}
       />
 
@@ -229,6 +238,8 @@ function AstronautDetail({
         <AssignmentsPanel
           crewData={crewData}
           records={records}
+          missions={missions}
+          onAdvancePhase={onAdvancePhase}
           selectedId={member.id}
           onSelectAstronaut={onSelectAstronaut}
           onAssignTask={onAssignTask}

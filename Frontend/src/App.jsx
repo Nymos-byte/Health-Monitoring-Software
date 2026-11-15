@@ -15,7 +15,8 @@ function getViewFromHash() {
 
 function App() {
   const initialData = useMemo(() => generateCrewData(), []);
-  const { crewData, records, emergencies, toggleEmergency, assignTask } = useRealtimeVitals(initialData);
+  const { crewData, records, missions, emergencies, toggleEmergency, assignTask, advancePhase } =
+    useRealtimeVitals(initialData);
   // Crew sees onboard data; ground sees only what the downlink has delivered
   const { groundData, links, now, forcedLoss, toggleLinkLoss } = useDownlink(crewData);
   const [view, setView] = useState(getViewFromHash);
@@ -85,6 +86,13 @@ function App() {
     setSelectedSection(getTask(taskId).environment);
   };
 
+  // Moving a mission to its next phase takes its whole crew there; follow the selected astronaut
+  const handleAdvancePhase = (missionId) => {
+    const assigned = advancePhase(missionId);
+    const taskId = assigned?.[selectedAstronaut];
+    if (taskId) setSelectedSection(getTask(taskId).environment);
+  };
+
   const handleChangeView = (next) => {
     window.location.hash = next === 'crew' ? '#/crew' : '#/ground';
   };
@@ -104,6 +112,8 @@ function App() {
     onSelectSection: handleSelectSection,
     onSelectAstronaut: handleSelectAstronaut,
     onAssignTask: handleAssignTask,
+    missions,
+    onAdvancePhase: handleAdvancePhase,
     blinking,
     emergencies,
     onToggleEmergency: toggleEmergency,

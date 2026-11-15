@@ -1,24 +1,28 @@
 import { SECTIONS, TASKS } from '../data/mockData';
-import { canAssignTask } from '../hooks/useRealtimeVitals';
+import { getAllowedEnvironments, taskBlocker } from '../utils/missions';
 
-// Task picker grouped by environment. Shows who else is on each task (several astronauts can
-// share one) and disables one-time tasks the astronaut has already completed.
+// Task picker limited to what the astronaut's mission phase allows. Shows who else is on each
+// task (crews often share one) and why a task is unavailable.
 export default function TaskSelect({
   value,
   onChange,
   astronautId,
   crewData,
   records,
+  missions,
   envId,
   className = '',
 }) {
-  const environments = envId ? SECTIONS.filter((s) => s.id === envId) : SECTIONS;
+  const member = crewData[astronautId];
+  const allowed = getAllowedEnvironments(missions, member);
+  const environments = SECTIONS.filter((s) => allowed.includes(s.id) && (!envId || s.id === envId));
   const members = Object.values(crewData);
 
   const label = (task) => {
     const others = members.filter((m) => m.taskId === task.id && m.id !== astronautId).length;
     const parts = [task.name, task.activity];
-    if (task.once) parts.push(canAssignTask(records, astronautId, task.id) ? 'one-time' : 'done');
+    if (task.eva) parts.push('in pairs');
+    if (task.once) parts.push(taskBlocker(records, missions, member, task.id) === 'done' ? 'done' : 'one-time');
     if (others) parts.push(`${others} other${others > 1 ? 's' : ''} on it`);
     return parts.join(' · ');
   };
@@ -36,7 +40,7 @@ export default function TaskSelect({
             <option
               key={t.id}
               value={t.id}
-              disabled={t.id !== value && !canAssignTask(records, astronautId, t.id)}
+              disabled={t.id !== value && taskBlocker(records, missions, member, t.id) !== null}
             >
               {label(t)}
             </option>

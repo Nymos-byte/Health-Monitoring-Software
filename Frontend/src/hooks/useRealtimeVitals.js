@@ -4,11 +4,11 @@ import {
   getMetricRange,
   getVitalContext,
   buildAssignment,
-  getTask,
-  recordKey,
   makeSessionRecord,
   generateInitialRecords,
+  MISSIONS,
 } from '../data/mockData';
+import { canAssignTask, getNextPhase, taskForPhase } from '../utils/missions';
 
 const TELEMETRY_TICK_MS = 3000;
 const HISTORY_LENGTH = 50;
@@ -66,19 +66,16 @@ function withVitals(member, cv, sample) {
   return { ...member, data: { ...member.data, currentVitals: cv, vitals } };
 }
 
-// A one-time task can't be assigned again once the astronaut has a record of it
-export function canAssignTask(records, astronautId, taskId) {
-  return !(getTask(taskId).once && records[recordKey(astronautId, taskId)]);
-}
-
 // Simulates real-time telemetry for every astronaut in their assigned task.
-// Each astronaut has exactly one task; reassigning stores the finished session as a record
-// and regenerates their data for the new context.
+// Each astronaut has exactly one task, limited by their mission's phase; reassigning stores the
+// finished session as a record and regenerates their data for the new context.
 export function useRealtimeVitals(initialCrewData) {
   const [crewData, setCrewData] = useState(initialCrewData);
   const crewRef = useRef(initialCrewData);
   const [records, setRecords] = useState(generateInitialRecords);
   const recordsRef = useRef(records);
+  const [missions, setMissions] = useState(() => Object.fromEntries(MISSIONS.map((m) => [m.id, m])));
+  const missionsRef = useRef(missions);
   const [emergencies, setEmergencies] = useState(() => new Set());
   const emergenciesRef = useRef(emergencies);
 
@@ -105,7 +102,10 @@ export function useRealtimeVitals(initialCrewData) {
 
   const assignTask = useCallback((astronautId, taskId) => {
     const current = crewRef.current[astronautId];
-    if (current.taskId === taskId || !canAssignTask(recordsRef.current, astronautId, taskId)) {
+    if (
+      current.taskId === taskId ||
+      !canAssignTask(recordsRef.current, missionsRef.current, current, taskId)
+    ) {
       return false;
     }
 
@@ -126,6 +126,28 @@ export function useRealtimeVitals(initialCrewData) {
     return true;
   }, []);
 
+  // The whole crew moves to the mission's next phase together, each with a task that fits it
+  const advancePhase = useCallback(
+    (missionId) => {
+      const mission = missionsRef.current[missionId];
+      const phase = getNextPhase(mission);
+      if (!phase) return null;
+
+      missionsRef.current = { ...missionsRef.current, [missionId]: { ...mission, phase } };
+      setMissions(missionsRef.current);
+      // Returns the task each crew member received, by astronaut id
+      const assigned = {};
+      Object.values(crewRef.current)
+        .filter((m) => m.missionId === missionId)
+        .forEach((member) => {
+          const taskId = taskForPhase(recordsRef.current, missionsRef.current, member);
+          if (taskId && assignTask(member.id, taskId)) assigned[member.id] = taskId;
+        });
+      return assigned;
+    },
+    [assignTask]
+  );
+
   const updateVitals = useCallback(() => {
     setCrewData((prev) => {
       const now = new Date();
@@ -145,7 +167,7 @@ export function useRealtimeVitals(initialCrewData) {
     return () => clearInterval(interval);
   }, [updateVitals]);
 
-  return { crewData, records, emergencies, toggleEmergency, assignTask };
+  return { crewData, records, missions, emergencies, toggleEmergency, assignTask, advancePhase };
 }
 
 function randomDelta(magnitude) {

@@ -7,7 +7,9 @@ import {
   getEnvironment,
   getTaskMetrics,
   getTaskPrimaryMetrics,
+  MISSION_PHASES,
 } from '../data/mockData';
+import { getEvaPartners } from '../utils/missions';
 import { getVitalStatus, getStatusColor } from '../utils/helpers';
 import {
   metricIcons,
@@ -26,6 +28,7 @@ const severityRank = { critical: 0, caution: 1, nominal: 2 };
 export default function CrewView({
   crewData,
   records,
+  missions,
   selectedAstronaut,
   onSelectAstronaut,
   onAssignTask,
@@ -38,6 +41,8 @@ export default function CrewView({
   const env = getEnvironment(member.env);
   const vitals = member.data.currentVitals;
   const context = getVitalContext(member, vitals);
+  const mission = missions[member.missionId];
+  const partners = getEvaPartners(member, crewData);
 
   // The readings on screen follow the astronaut's current task (e.g. suit telemetry during EVA)
   const numericMetrics = getTaskMetrics(member.task).filter((k) => !metricDefinitions[k].isCategorical);
@@ -68,7 +73,7 @@ export default function CrewView({
         <div>
           <h2 className="text-2xl font-bold">{member.name}</h2>
           <p className="text-gray-400">
-            {env.name} · {env.missionDayLabel}
+            {mission.name} · {MISSION_PHASES[mission.phase].label} · {env.name} · {env.missionDayLabel}
             {vitals.flight_phase && env.id === 'spacecraft' && ` · ${vitals.flight_phase}`}
           </p>
           <p className="mt-1 flex items-center gap-2 text-gray-200">
@@ -76,6 +81,13 @@ export default function CrewView({
             {member.task.name}
             <span className="text-gray-500">· {member.task.activity} activity</span>
           </p>
+          {member.task.eva && (
+            <p className={`text-sm ${partners.length ? 'text-gray-400' : 'text-vital-orange'}`}>
+              {partners.length
+                ? `With ${partners.map((p) => p.name).join(', ')}`
+                : 'No EVA partner assigned — do not go out alone'}
+            </p>
+          )}
         </div>
       </div>
 
@@ -153,6 +165,7 @@ export default function CrewView({
           astronautId={member.id}
           crewData={crewData}
           records={records}
+          missions={missions}
           className="!text-xs !text-gray-300"
         />
         <button
