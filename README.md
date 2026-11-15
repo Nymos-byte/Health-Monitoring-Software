@@ -105,8 +105,11 @@ ablations and limitations are in [`docs/ML_PIPELINE.md`](docs/ML_PIPELINE.md).
 
 ## Use of AI
 
-The team used an AI assistant (Claude, by Anthropic) to help write code and documentation. All
-data is simulated and every calibration figure is traced to a NASA/CSA source in
+The team used AI assistants (Claude, by Anthropic, and Gemini, by Google) for research, data
+analysis, writing, coding and debugging, always under human review. The **Vital-X logo**
+(`Frontend/public/logo-vitalx.png`) was **generated with AI** and carries a visible
+"AI-generated logo" watermark. The app icons are drawn in code (`Frontend/scripts/make-icons.py`).
+All data is simulated and every calibration figure is traced to a NASA/CSA source in
 [`docs/SOURCES.md`](docs/SOURCES.md).
 
 ## Tech stack

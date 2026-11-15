@@ -23,8 +23,8 @@ export default function Header({ view, onChangeView, blackBox, wearer }) {
         <h1 className="shrink-0">
           <img
             src="/logo-vitalx.png"
-            alt="Vital-X — Space Health Monitoring System"
-            className="h-8 sm:h-10 w-auto"
+            alt="Vital-X — Space Health Monitoring System (AI-generated logo)"
+            className="h-10 sm:h-12 w-auto"
           />
         </h1>
 
