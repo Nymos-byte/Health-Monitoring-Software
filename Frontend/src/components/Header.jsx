@@ -1,4 +1,4 @@
-import { Clock, Satellite, MonitorDot, User } from 'lucide-react';
+import { Clock, MonitorDot, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 const VIEWS = [
@@ -19,14 +19,13 @@ export default function Header({ view, onChangeView }) {
   return (
     <header className="bg-space-800/90 backdrop-blur-md border-b border-space-600 sticky top-0 z-50">
       <div className="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-nasa-blue flex items-center justify-center shrink-0">
-            <Satellite size={18} className="text-white" />
-          </div>
-          <h1 className="hidden sm:block text-lg font-bold text-white tracking-wide">
-            ASTRO<span className="text-vital-cyan">VITALS</span>
-          </h1>
-        </div>
+        <h1 className="shrink-0">
+          <img
+            src="/logo-vitalx.png"
+            alt="Vital-X — Space Health Monitoring System"
+            className="h-8 sm:h-10 w-auto"
+          />
+        </h1>
 
         {/* View switch */}
         <nav className="flex p-1 bg-space-900/80 border border-space-600 rounded-xl">
