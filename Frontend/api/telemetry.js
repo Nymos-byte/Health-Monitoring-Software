@@ -92,10 +92,30 @@ export default async function handler(req, res) {
 
   try {
     const receivedAt = Date.now();
+    let duplicates = 0;
     for (const item of items) {
-      await target.items.create({ ...item, ...delivery(item, receivedAt), origen: LIVE });
+      // Identification first, so it is the first thing seen when browsing the container. The id
+      // is fixed per astronaut and recording time, so a record sent twice is stored once.
+      const { id: _clientId, ...rest } = item;
+      const doc = {
+        id: `live-${item.astronauta_id}-${item.timestamp}`,
+        astronauta_id: item.astronauta_id,
+        origen: LIVE,
+        ...delivery(item, receivedAt),
+        enlace_al_grabar: item.enlace_al_grabar ?? null,
+        timestamp: item.timestamp,
+        ...rest,
+      };
+      // Server-owned fields win over anything the client sent (keys keep their position above)
+      Object.assign(doc, { origen: LIVE, ...delivery(item, receivedAt) });
+      try {
+        await target.items.create(doc);
+      } catch (error) {
+        if (error.code !== 409) throw error;
+        duplicates += 1;
+      }
     }
-    return res.status(201).json({ stored: items.length });
+    return res.status(201).json({ stored: items.length - duplicates, duplicates });
   } catch (error) {
     console.error('Cosmos DB write failed:', error.message);
     return res.status(502).json({ error: 'Cloud storage rejected the data' });

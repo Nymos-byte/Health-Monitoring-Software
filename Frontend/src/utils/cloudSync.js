@@ -65,7 +65,17 @@ export async function recordSnapshot(snapshot) {
 
 // Send the black box to ground, oldest first, in batches. A batch is only removed from the
 // device once ground has accepted it. Returns how many records were sent.
-export async function flushPending() {
+// Only one send runs at a time: two overlapping ones would upload the same batch twice.
+let flushing = null;
+
+export function flushPending() {
+  flushing ??= sendAll().finally(() => {
+    flushing = null;
+  });
+  return flushing;
+}
+
+async function sendAll() {
   let sent = 0;
   for (;;) {
     const batch = await db.telemetriaPendiente.orderBy('id').limit(BATCH_SIZE).toArray();

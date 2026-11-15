@@ -139,6 +139,13 @@ fails.
 | `retraso_s` | server | Seconds between recording and arrival |
 | `entrega` | server | `tiempo_real`, or `caja_negra` if recorded without a link or delayed more than 45 s |
 
+The server sets `id = live-<astronauta_id>-<timestamp>`, so a record sent twice is stored once
+(the response counts `duplicates`), and puts `astronauta_id`, `origen`, `entrega`, `recibido`,
+`retraso_s`, `enlace_al_grabar` and `timestamp` first in each document. Cosmos DB keeps documents
+in arrival order, so a black-box backlog appears after newer live records; to browse by recording
+time in Data Explorer use
+`SELECT * FROM c WHERE c.origen = 'en_vivo' ORDER BY c.timestamp DESC`.
+
 Ground → *Live* → *Azure reception* lists these per astronaut (control only, not on crew devices),
 so a test can show whether the offline mode worked and whether the outage was real or simulated.
 To test a real outage, put the crew device in airplane mode (or DevTools → Network → Offline).
