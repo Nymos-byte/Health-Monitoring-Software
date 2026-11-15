@@ -2,6 +2,10 @@
 
 **NASA Space Apps Challenge 2026 – Health Monitoring challenge**
 
+> **Live demo:** https://vitalx.ticketfix.app — Ground Control, Crew Display
+> ([`#/crew`](https://vitalx.ticketfix.app/#/crew)) and Wrist ([`#/wrist`](https://vitalx.ticketfix.app/#/wrist)).
+> All health data is simulated.
+
 Long-duration missions expose astronauts to space radiation, isolation and confinement, altered
 gravity, distance from Earth and a hostile closed environment. On the Moon or Mars, Earth-based
 medical support can be minutes away and the link drops regularly, so crews must spot health
