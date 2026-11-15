@@ -6,31 +6,28 @@ Long-duration missions expose astronauts to space radiation, isolation and confi
 gravity, distance from Earth and a hostile closed environment. On a Mars mission, Earth-based
 medical support can be minutes away, so crews must spot health changes themselves. This project
 builds the data and machine-learning core of a health-monitoring system that collects health
-indicators, detects risk signals early and tells the astronaut **what is happening and why**.
+indicators, **knows which mission context the astronaut is in**, detects risk signals early and
+avoids false alarms for changes that are expected in that context.
 
 > ⚠️ **All training data in this repository is SIMULATED.** It is generated from parameters
 > calibrated with NASA Human Research Program (HRP) publications (see [`docs/SOURCES.md`](docs/SOURCES.md)).
 > Every simulated record carries `data_origin = SIMULATED`. The models demonstrate a pipeline that is
-> ready to be retrained on real data (e.g. restricted NASA LSDA/NLSP datasets). They are **not**
-> validated for clinical use.
+> ready to be retrained on real data. They are **not** validated for clinical use.
 
 ---
 
-## Why simulated data?
+## The problem: the same reading means different things in different contexts
 
-The public NASA datasets we reviewed (OSDR, NLSP open bed-rest studies) cover very few subjects,
-and the large human datasets are restricted. NASA HRP pages describe *what* is measured and *how*
-the body changes (e.g. bone mineral density loss of 1–1.5% per month), but do not publish
-continuous vital-sign streams. We therefore:
+| Context | What is *expected* there (NASA source) | A context-blind system would… |
+|---|---|---|
+| Earth pre-flight | Personal baseline | — |
+| Spacecraft (launch, transit, reentry) | Launch/reentry stress (high HR); deep-space radiation dose higher than in low Earth orbit | alarm on every launch and reentry |
+| Space station (ISS) | Bone loss of 1–1.5% per month; 50–100 mSv per 6-month stay | — |
+| Planetary base (Moon 0.17 g, Mars 0.38 g) | Exploration habitat at 8.2 psia / 34% O₂ is mildly hypobaric, so SpO₂ is lower; orthostatic response when gravity returns | alarm on low SpO₂ every day |
+| Earth post-flight | **>80% orthostatic intolerance on landing day** after 4–6 month missions, improving after 24 h; 45-day reconditioning | alarm on the landing-day tachycardia |
 
-1. Extracted quantitative findings from NASA HRP risk pages and evidence reports.
-2. Built a physiological simulator calibrated with those parameters.
-3. Injected labeled health events and sensor faults (edge cases).
-4. Benchmarked 7 detection approaches, testing always on astronauts never seen in training.
-
-An audit of an earlier set of team CSVs (in [`data/original/`](data/original/)) showed they
-were independent random columns with no physiological relationships and no labels, so they were
-replaced. See [`docs/DATA_AUDIT.md`](docs/DATA_AUDIT.md).
+The system must tell these **expected adaptations** apart from real health events, such as a
+severe orthostatic intolerance that does not resolve, habitat hypoxia or an infection.
 
 ---
 
@@ -38,15 +35,15 @@ replaced. See [`docs/DATA_AUDIT.md`](docs/DATA_AUDIT.md).
 
 ```
 ├── generator/
-│   ├── generate_data.py        # Physiological simulator (reproducible with a seed)
-│   └── validate_data.py        # Consistency checks + quick trainability test
+│   ├── generate_data.py        # Mission simulator (ISS, Lunar, Mars), reproducible with a seed
+│   └── validate_data.py        # Checks the data against the NASA-calibrated expectations
 ├── data/
-│   ├── simulated/              # Generated datasets (see data/simulated/README.md)
+│   ├── simulated/              # sim_daily.csv, sim_eva.csv, parameters_sources.csv
 │   └── original/               # Earlier team CSVs (origin unverified, kept for reference)
 ├── model/
-│   ├── train_models.py         # Benchmark of 7 approaches + final model training
-│   └── trained/                # Trained models (.joblib)
-├── results/                    # Benchmark results (CSV)
+│   ├── train_models.py         # Context detector + context-aware risk models + evaluation
+│   └── trained/                # context_detector / daily_model / eva_model (.joblib)
+├── results/                    # Evaluation results (CSV)
 └── docs/
     ├── SOURCES.md                       # Every NASA/CSA source and how to cite it
     ├── DATA_AUDIT.md                    # Integrity audit of the original CSVs
@@ -55,139 +52,138 @@ replaced. See [`docs/DATA_AUDIT.md`](docs/DATA_AUDIT.md).
 
 A column glossary is in [`data/simulated/README.md`](data/simulated/README.md).
 
----
-
 ## Quick start
 
 Requires Python 3.10+.
 
 ```bash
 pip install -r requirements.txt
-
-# 1. Generate simulated data (24 astronauts, seed 42)
-python generator/generate_data.py --astronauts 24 --seed 42
-
-# 2. Validate consistency
-python generator/validate_data.py
-
-# 3. Benchmark all models and train the final ones (~4 minutes)
-python model/train_models.py
-```
-
-Load a trained model:
-
-```python
-import joblib
-bundle = joblib.load("model/trained/eva_model.joblib")
-model, features = bundle["model"], bundle["features"]
-# features must be built with eva_features() / daily_features() from model/train_models.py
+python generator/generate_data.py --astronauts 30 --seed 42   # 1. simulate missions
+python generator/validate_data.py                             # 2. check against NASA numbers
+python model/train_models.py                                  # 3. evaluate and train (~7 min)
 ```
 
 ---
 
 ## The simulator
 
-Each simulated astronaut has a **personal baseline** (heart rate, blood pressure, sleep, bone
-density, etc.) and goes through a full mission:
+Thirty astronauts are split evenly between three mission types:
 
-`Earth pre-flight (30 days) → launch → transit → docking → station (150–210 days, 2–5 EVAs) → re-entry`
-
-| Physiology modeled | How |
+| Mission | Timeline |
 |---|---|
-| Heart rate vs. activity | Rest → light → moderate → intense raises HR (≈68 → 77 → 93 → 112 bpm) |
-| Blood pressure | Systolic follows HR; diastolic follows systolic (r ≈ 0.77) |
-| Sleep → cognition | Sleep deficit slows Psychomotor Vigilance Test reaction time (r ≈ −0.48) |
-| Bone loss | 1.0–1.5% BMD per month (NASA HRP) |
-| Spaceflight adaptation | Gradual shift in HR, BP and sleep over the first ~2 weeks |
-| Radiation | Cumulative dose that only increases; solar particle events add spikes |
-| EVA suit | Suit pressure (~4.3 psia), CO₂ build-up over 6.5 h, thermal load |
+| **ISS** | Earth (30 d) → launch → transit → docking → **station 150–210 d** → reentry → Earth post-flight (45 d) |
+| **Lunar** | Earth (30 d) → launch → transit 4–5 d → **lunar base 30–60 d (0.17 g)** → transit → reentry → Earth post-flight (45 d) |
+| **Mars** | Earth (30 d) → launch → **transit ~6 months** → **Mars base 60–90 d (0.38 g)** → transit ~6 months → reentry → Earth post-flight (45 d) |
 
-**Labeled events.** Daily data includes dehydration, sleep deprivation, infection,
-isolation stress and solar particle events. EVA data includes mild hypoxia, CO₂ scrubber failure,
-overexertion and suit pressure leaks. Events ramp up, peak and resolve, which makes early detection
-measurable. Each row has `event`, `event_intensity` (0–1) and `risk_level` (0 normal,
-1 caution, 2 critical).
+The Mars surface stay is shortened from the real ~500-day design reference mission to keep the
+dataset small.
 
-**Edge cases.** About 1.5% of the data is missing, there are motion-artifact spikes, and launch and
-re-entry are stressful but normal phases. These are labeled in `sensor_artifact` and do **not**
-change the event label, so the model must learn to ignore them.
+**Context telemetry** (what a vehicle or habitat would report): `gravity_g`, `peak_accel_g`
+(~3 g at launch, ~4 g at reentry), `cabin_pressure_psia`, `cabin_o2_pct` and the radiation dose.
 
----
+**Calibration from NASA documents**:
 
-## Model benchmark
+| Parameter | Value | Source |
+|---|---|---|
+| Bone loss in microgravity | 1–1.5% BMD per month | HRP Risk of Bone Changes |
+| Landing-day orthostatic intolerance | >80% after 4–6 month missions; less prevalent after 24 h | Cardio Evidence Book p25–26 |
+| Left-ventricular mass | −7.2% over 180 days (bed rest without exercise: −8% at 6 weeks) | Cardio Evidence Book p54 |
+| ISS radiation | 50–100 mSv per 6-month stay | Degen Evidence Report p11 |
+| Mars mission radiation | 300–450 mGy in total | Degen Evidence Report p5 |
+| 30-day / 1-year heart dose limits | 250 / 500 mGy-Eq | Degen Evidence Report p7 |
+| Exploration habitat atmosphere | 8.2 psia, 34% O₂ | Degen Evidence Report p32 |
+| Bone T-score bands | ≥ −1.0 pre-flight, ≥ −2.0 in-mission | OCHMO Bone Loss brief |
+| Post-flight reconditioning | 45 days, 2 h/day | OCHMO Bone Loss brief |
 
-Seven approaches were compared using **GroupKFold by astronaut** (4 folds). The models are always
-tested on unseen crew members. The benchmark was repeated on **3 independent simulated populations**
-(seeds 42, 7, 2026). The tables show means; ± is the standard deviation across populations.
+Validation confirms the simulator reproduces these numbers: Mars dose median 364 mGy, ISS 71 mGy,
+station bone loss 1.0–1.5%/month, landing-day HR +12 bpm, habitat SpO₂ −1.7%. Parameters still
+marked `TO BE VERIFIED` are listed in
+[`data/simulated/parameters_sources.csv`](data/simulated/parameters_sources.csv).
 
-### Daily monitoring (Earth + spacecraft + station)
-
-| Model | Risk F1 | Critical recall | Episodes detected | False alarms | FA on sensor spikes | FA on launch/re-entry |
-|---|---|---|---|---|---|---|
-| **Gradient Boosting** ✅ | **0.71 ± 0.01** | 76% | 90% | 2% | 2% | 1% |
-| MLP neural network | 0.72 ± 0.02 | 76% | 93% | 2% | 2% | 0% |
-| Random Forest | 0.70 ± 0.02 | 75% | 86% | 2% | 0% | 0% |
-| Threshold rules | 0.54 ± 0.02 | 74% | 84% | 4% | 20% | 12% |
-| Logistic regression | 0.44 ± 0.01 | 94% | 100% | 46% | 85% | 0% |
-| Isolation Forest | 0.31 ± 0.03 | 50% | 54% | 5% | 16% | 24% |
-| Personal-baseline z-score | 0.26 ± 0.03 | 33% | 55% | 5% | 11% | 7% |
-
-### EVA / spacewalk (one reading every 15 min)
-
-| Model | Risk F1 | Critical recall | Median latency | False alarms | Event-type F1 |
-|---|---|---|---|---|---|
-| **Gradient Boosting** ✅ | **0.93 ± 0.00** | 97% | 15 min | 0.4% | 0.89 |
-| Random Forest | 0.93 ± 0.01 | 98% | 15 min | 0.2% | 0.91 |
-| Logistic regression | 0.91 ± 0.02 | 100% | 10 min | 3% | 0.93 |
-| MLP neural network | 0.88 ± 0.01 | 93% | 22.5 min | 1% | 0.85 |
-| Threshold rules | 0.86 ± 0.02 | 100% | 20 min | 0.04% | — |
-| Isolation Forest | 0.77 ± 0.05 | 85% | 25 min | 5% | — |
-| Personal-baseline z-score | 0.66 ± 0.08 | 71% | 25 min | 5% | — |
-
-Full metrics are in [`results/`](results/). They include early-detection recall, AUC-PR and
-F1 on rows with missing data.
-
-### Why Gradient Boosting
-
-- **Most stable across populations.** In the daily data the MLP is +0.01 F1 higher, but that is
-  within its own variability (±0.02). The selection rule is: among models within 0.02 F1 of
-  the best, pick the lowest standard deviation.
-- **Robust to edge cases.** It raises 2% false alarms on sensor spikes, against 20% for fixed
-  thresholds. It is also not fooled by launch and re-entry stress.
-- **Handles missing data natively.**
-- **Explainable** through feature importance, so the app can tell the astronaut *why* an alert fired.
-
-### Key findings
-
-- **Hybrid design recommended.** Fixed thresholds catch almost as many critical events as the
-  model (74% vs 76%) but raise more false alarms. The best design keeps rules as a safety net for
-  clearly dangerous values and uses the model for subtle patterns.
-- **High recall can be misleading.** Logistic regression catches 94% of critical events in daily
-  data, but it alarms on 46% of normal days. An astronaut would learn to ignore it.
-- **Unsupervised methods are weak here.** Isolation Forest and z-score flag that something is
-  unusual, but cannot tell what it is.
-- **Radiation is detected by the dosimeter, not by vital signs.** The daily dose is a key feature.
-- **Dehydration is hard to detect** because its signature resembles exercise. This suggests the
-  app should ask the astronaut about fluid intake.
-- **Weak point: early detection.** Only ~40% of daily events are flagged in their early phase
-  (intensity < 0.5). This is the main area for improvement.
+**Labels.**
+- `expected_adaptation` marks normal context effects. These rows are labeled `Normal`.
+- `event` marks real health events: dehydration, sleep deprivation, infection, isolation stress,
+  solar particle event, habitat hypoxia and severe orthostatic intolerance (daily data); mild
+  hypoxia, CO₂ failure, overexertion and suit pressure leak (EVA data).
+- `risk_level` is 0 normal, 1 caution, 2 critical.
+- `sensor_artifact` marks missing values and motion spikes. These are edge cases that must not
+  change the result.
 
 ---
+
+## How the system works
+
+1. **Context detector.** It infers the context from telemetry only, then applies a 3-day majority
+   vote so a single noisy day cannot flip the context.
+2. **Context features.** It adds the detected context, the days in that context, the cumulative
+   microgravity exposure and the 30-day radiation dose.
+3. **Two personal baselines.** A continuous rolling baseline (past 14 days) and a per-context
+   baseline that restarts at every transition, using the Earth pre-flight values for the first
+   days.
+4. **Risk model.** Gradient Boosting, the model selected in an earlier 7-model benchmark.
+5. **Radiation advisory.** A separate channel for a 30-day dose above 50% of the NASA heart limit.
+   It is not a health alarm.
+
+## Results
+
+All results are tested on astronauts never seen in training (GroupKFold by astronaut), and
+averaged over 3 independent simulated populations.
+
+**Context detection (telemetry only):** 90% overall. It is 100% for Earth pre-flight, Earth
+post-flight and planetary base. The remaining errors are spacecraft days in low Earth orbit
+confused with station days, which have identical telemetry.
+
+**Daily risk detection:**
+
+| Model | Risk F1 | Critical recall | False alarms (normal days) |
+|---|---|---|---|
+| Rules, context-blind | 0.50 | 73% | 2.4% |
+| Rules, context-aware | 0.50 | 70% | 2.2% |
+| Gradient Boosting, context-blind | 0.72 ± 0.00 | 76% | 1.2% |
+| **Gradient Boosting, context-aware** ✅ | **0.71 ± 0.00** | **76%** | **1.1%** |
+| Gradient Boosting, true context (upper bound) | 0.71 ± 0.01 | 77% | 1.2% |
+
+**False alarms during expected adaptations** (the core of the problem):
+
+| Expected adaptation | Rules blind | Rules context | GB blind | **GB context** |
+|---|---|---|---|---|
+| Launch / reentry stress | **16.8%** | 1.5% | 2.4% | **0.0%** |
+| Landing orthostatic response | 3.0% | 0.8% | 4.9% | 3.6% |
+| Hypobaric habitat (planetary base) | 1.7% | 1.7% | 1.4% | 1.8% |
+| Early microgravity adaptation | 0.5% | 0.5% | 1.3% | 1.2% |
+| Post-flight reconditioning | 0.4% | 0.4% | 0.1% | 0.1% |
+
+**EVA** (station vs. lunar and Mars surface): F1 0.96. False alarms stay at or below 0.4% at every
+location, with or without the location feature.
+
+### What we learned
+
+- **Context matters most at abrupt transitions.** For rules, it cuts launch/reentry false alarms
+  from 16.8% to 1.5% and landing false alarms from 3.0% to 0.8%. For the model, it removes
+  launch/reentry false alarms and cuts landing false alarms by about a quarter.
+- **Gradual adaptations are already handled by a rolling personal baseline.** The blind model
+  re-learns "normal" within days, so contexts such as the hypobaric habitat do not need special
+  treatment. Context does not hurt overall accuracy (F1 0.71 vs 0.72).
+- **Resetting the baseline alone is a mistake.** An ablation showed it lowers F1 to 0.69. Keeping
+  both baselines restores F1 and still cuts transition false alarms.
+- **Approaching a radiation limit is not a health alarm.** It needs its own advisory channel,
+  otherwise it shows up as false alarms after solar particle events.
+- **Context detection is easy once telemetry is available**; the only confusion has no clinical
+  impact. The detected context performs about as well as the true context.
 
 ## Limitations
 
-- The results measure how well the models learn the simulator's patterns, **not real-world
+- These results measure how well the models learn the simulator's patterns, **not real-world
   clinical performance**.
-- Parameters marked `TO BE VERIFIED` in
-  [`data/simulated/parameters_sources.csv`](data/simulated/parameters_sources.csv) do not have a
-  NASA citation yet.
+- Expected adaptations follow average values from NASA documents. Real individual responses vary
+  more.
+- Parameters marked `TO BE VERIFIED` still need a citation.
 - The models need validation on real astronaut or analog data (bed rest, HERA) before any
   operational use.
 
 ## Sources
 
-The main sources are the NASA Human Research Program
-[Hazards](https://www.nasa.gov/hrp/hazards/), [Risks](https://www.nasa.gov/hrp/risks/) and
-[Ongoing Research](https://www.nasa.gov/hrp/ongoing-hrp-research/) pages, plus Canadian Space
-Agency articles. The full list, with the exact page each number comes from, is in
+The main sources are the NASA HRP Hazards, Risks and Ongoing Research pages, the Cardiovascular
+Risk Evidence Book (2022), the Evidence Report on degenerative tissue effects from radiation
+(2016) and the NASA-STD-3001 Bone Loss technical brief. The full list is in
 [`docs/SOURCES.md`](docs/SOURCES.md).

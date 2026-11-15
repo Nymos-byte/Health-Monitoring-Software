@@ -52,6 +52,28 @@ toward the NASA data requirement.
 | Mars ~140 million miles away on average; ~3-year mission; 3/8 Earth gravity for up to 2 years | https://www.nasa.gov/hrp/hazards/ |
 | Spaceflight Standard Measures: since 2018, more than 30 astronauts | https://www.nasa.gov/reference/artemis-ii-standard-measures/ |
 
+### Findings extracted from the evidence PDFs (used to calibrate the simulator)
+
+| Finding | Source (page) |
+|---|---|
+| >80% of US astronauts show orthostatic intolerance on landing day after 4–6 month missions | Cardiovascular Evidence Book 2022, p25 |
+| Orthostatic intolerance becomes less prevalent 24 h after landing, partly as plasma volume is restored | Cardiovascular Evidence Book 2022, p26 |
+| Plasma volume deficits of 5–19% after Space Shuttle missions; 8.4%, 13.1%, 15.9% on Skylab 2/3/4 | Cardiovascular Evidence Book 2022, p27, p31 |
+| Left-ventricular mass −4.7%, −8.0%, −15.6% after 2, 6, 12 weeks of bed rest; −9.5% after 60 days (women) | Cardiovascular Evidence Book 2022, p54 |
+| Stagnant or retrograde internal jugular vein flow in 6 of 11 crew; one thrombus | Cardiovascular Evidence Book 2022, p19 |
+| Atrial fibrillation/flutter prevalence of 10% in the astronaut corps (36 astronauts through 2019) | Cardiovascular Evidence Book 2022, p43 |
+| Insulin ~+50% and HOMA-IR ~+60% after long-duration flight | Cardiovascular Evidence Book 2022, p40 |
+| ISS crews are scheduled 2.5 h/day for exercise | Cardiovascular Evidence Book 2022, p30 |
+| ISS effective dose of 50–100 mSv per 6-month stay | Degenerative Tissue Effects Evidence Report, p11 |
+| ~300–450 mGy (1–1.3 Sv) total body exposure for a 3-year Mars mission | Degenerative Tissue Effects Evidence Report, p5 |
+| Shielded solar particle event organ doses of 0.15–0.5 Gy per Mars mission | Degenerative Tissue Effects Evidence Report, p6 |
+| Heart dose limits: 250 mGy-Eq (30 days), 500 (1 year), 1,000 (career); lens 1,000 / 2,000 / 4,000; CNS 500 / 1,000 / 1,500 mGy | Degenerative Tissue Effects Evidence Report, p7 |
+| Exploration habitat atmosphere of 8.2 psia and 34% O₂ (mildly hypobaric hypoxic) | Degenerative Tissue Effects Evidence Report, p32 |
+| NASA T-score bands: ≥ −1.0 pre-flight certification, ≥ −2.0 in-mission and end of mission | Bone Loss Medical Technical Brief (OCHMO-MTB-013) |
+| Vitamin D: 35–90 ng/ml optimal; <20 ng/ml deficient | Bone Loss Medical Technical Brief (OCHMO-MTB-013) |
+| Post-flight reconditioning: 45 days from R+1, 2 h/day | Bone Loss Medical Technical Brief (OCHMO-MTB-013) |
+| Height increases ~3% over the first 3–4 days of weightlessness | What is your space height? (NASA education) |
+
 ## 4. What NASA measures (justification for the chosen indicators)
 
 | Study | URL |
