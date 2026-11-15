@@ -15,8 +15,9 @@ const EVA_SESSIONS_PER_EVENT = 2;
 const EVA_NORMAL_SESSIONS = 3;
 const CONCURRENCY = 8;
 const SEED = 42;
-// Synthetic calendar: mission day 0 is this date (the source data only has relative days)
-const LAUNCH = Date.UTC(2026, 0, 1, 8);
+// Synthetic calendar: mission day 0 is this date (the source data only has relative days).
+// Chosen so the whole sample (days -30 to 535) lies in the past and never looks like new data.
+const LAUNCH = Date.UTC(2025, 4, 1, 8);
 const DAY_MS = 86400000;
 
 const ENVIRONMENTS = {

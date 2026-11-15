@@ -44,14 +44,15 @@ The container holds two kinds of records, told apart by `origen`:
 - `entrenamiento`: a sample of the model's training data loaded once by
   `Frontend/scripts/seed-training.mjs`: 1,500 daily records (all 240 critical, 360 caution,
   900 normal) and 11 whole spacewalks (297 readings, two per EVA event plus three uneventful ones).
-  Their dates are synthetic (mission day 0 = 2026-01-01). Ground never shows them as live data.
+  Their dates are synthetic (mission day 0 = 2025-05-01, so all of them lie in the past). Ground
+  never shows them as live data. Live records carry the real recording time.
 
 ## Front-end modules
 
 | Path | Role |
 |---|---|
 | `src/App.jsx` | Root: picks the view from the URL hash, wires the hooks together, owns alert acknowledgement and theme. |
-| `src/hooks/useRealtimeVitals.js` | Simulates telemetry for every astronaut in their current task: each reading settles back toward the astronaut's baseline with small sensor noise, unless a demo situation or manual readings push it away. Also task assignment, planned tasks, mission phases and session records. |
+| `src/hooks/useRealtimeVitals.js` | Simulates telemetry for every astronaut in their current task: each reading settles back toward the astronaut's baseline with small sensor noise, unless a demo situation or manual readings push it away. About every 8 minutes per astronaut a reading drifts briefly into the caution band (never critical) and settles back. Also task assignment, planned tasks, mission phases and session records. |
 | `src/data/scenarios.js` | Demo risk situations (one per event of the training data) and where each pushes the readings, relative to the context-adjusted limits. |
 | `src/hooks/useCloudFeed.js` | Ground's reader of Azure: polls `GET /api/telemetry` and merges the live records into the ground copy; astronauts without a reporting device stay simulated. |
 | `src/hooks/useDownlink.js` | Simulates the space-to-ground link per environment, with scheduled outages and forced link loss. Ground only sees what the link delivered. |

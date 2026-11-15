@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   crewMembers,
   metricDefinitions,
+  getMetricRange,
   getVitalContext,
   buildAssignment,
   makeSessionRecord,
@@ -32,14 +33,51 @@ const NOISE = {
   suit_pressure_psia: 0.005,
   suit_co2_ppm: 20,
 };
+// Now and then a reading drifts a little out of its normal range on its own, then settles back.
+// It reaches the caution band only (a third of the way to the critical limit), never critical.
+// Per astronaut and tick: about one spike every 8 minutes each.
+const SPIKE_CHANCE = 0.006;
+const SPIKE_TICKS = [3, 6];
+const SPIKE_DEPTH = 0.35;
+const SPIKE_METRICS = {
+  heart_rate_bpm: 'high',
+  systolic_bp_mmhg: 'high',
+  body_temp_c: 'high',
+  spo2_pct: 'low',
+  suit_co2_ppm: 'high',
+};
 // Dose builds up slowly away from Earth's surface
 const RADIATION_PER_TICK = 0.01;
 const ON_EARTH = ['earth_preflight', 'earth_postflight'];
 
 // Where every reading is heading: the astronaut's baseline, unless a situation overrides it
+function spikeTarget(member, cv, metric) {
+  const r = getMetricRange(metric, member.env, getVitalContext(member, cv));
+  return SPIKE_METRICS[metric] === 'high'
+    ? r.max + (r.criticalHigh - r.max) * SPIKE_DEPTH
+    : r.min - (r.min - r.criticalLow) * SPIKE_DEPTH;
+}
+
+// Starts, continues or ends a spontaneous spike (none while a demo situation is running)
+function nextSpike(member, cv) {
+  if (member.scenario) return null;
+  if (member.spike) {
+    return member.spike.ticksLeft > 1 ? { ...member.spike, ticksLeft: member.spike.ticksLeft - 1 } : null;
+  }
+  if (Math.random() >= SPIKE_CHANCE) return null;
+  const candidates = Object.keys(SPIKE_METRICS).filter((k) => typeof cv[k] === 'number');
+  const metric = candidates[Math.floor(Math.random() * candidates.length)];
+  const [min, max] = SPIKE_TICKS;
+  return { metric, ticksLeft: min + Math.floor(Math.random() * (max - min + 1)) };
+}
+
 function targetsFor(member, cv) {
-  const { scenario } = member;
-  if (!scenario) return member.data.baseline;
+  const { scenario, spike } = member;
+  if (!scenario) {
+    return spike
+      ? { ...member.data.baseline, [spike.metric]: spikeTarget(member, cv, spike.metric) }
+      : member.data.baseline;
+  }
   const overrides =
     scenario.id === MANUAL_SCENARIO.id
       ? scenario.values
@@ -198,8 +236,10 @@ export function useRealtimeVitals(initialCrewData) {
           if (typeof baseline.cumulative_radiation_mgy === 'number' && !ON_EARTH.includes(member.env)) {
             baseline.cumulative_radiation_mgy += RADIATION_PER_TICK;
           }
-          const current = { ...member, data: { ...member.data, baseline } };
-          const cv = nextVitals(current, member.data.currentVitals, member.scenario ? RAMP : SETTLE);
+          const spike = nextSpike(member, member.data.currentVitals);
+          const current = { ...member, spike, data: { ...member.data, baseline } };
+          const rate = member.scenario || spike ? RAMP : SETTLE;
+          const cv = nextVitals(current, member.data.currentVitals, rate);
           const sample = { ...cv, time, timestamp: now.getTime() };
           return [id, withVitals(current, cv, sample)];
         })
