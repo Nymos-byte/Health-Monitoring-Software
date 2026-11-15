@@ -13,6 +13,7 @@ import BodyCamPanel from '../components/BodyCamPanel';
 import SessionRecords from '../components/SessionRecords';
 import DataSourceBar from '../components/DataSourceBar';
 import DemoControls from '../components/DemoControls';
+import ReceptionLog from '../components/ReceptionLog';
 import { getBufferedSamples } from '../hooks/useDownlink';
 import {
   metricDefinitions,
@@ -131,6 +132,7 @@ export default function GroundView({
               now={now}
               blinking={blinking}
               onboard={onboardData[focused.id]}
+              cloudLive={groundSource === 'azure' && cloud.status === 'live'}
               onSetScenario={onSetScenario}
               onSetManualReadings={onSetManualReadings}
               onSelectAstronaut={onSelectAstronaut}
@@ -167,6 +169,7 @@ function AstronautDetail({
   now,
   blinking,
   onboard,
+  cloudLive,
   onSetScenario,
   onSetManualReadings,
   onSelectAstronaut,
@@ -215,6 +218,9 @@ function AstronautDetail({
           <span className="ml-auto self-center flex items-center gap-1.5 px-2.5 py-1 text-xs whitespace-nowrap text-vital-green">
             <Database size={13} />
             From device via Azure · {Math.max(0, Math.round((now - member.cloudAt) / 1000))}s ago
+            {member.cloudLog?.[0]?.delivery === 'caja_negra' && (
+              <span className="text-vital-orange">· black box</span>
+            )}
           </span>
         ) : (
           <span className="ml-auto self-center flex items-center gap-1.5 px-2.5 py-1 text-xs whitespace-nowrap text-gray-500">
@@ -228,6 +234,7 @@ function AstronautDetail({
         <div className={`space-y-5 transition-opacity ${link.status === 'aos' ? '' : 'opacity-60'}`}>
           <VitalCards title="Key readings" metrics={primaryMetrics} size="lg" {...cardProps} />
           <VitalCards title="Other readings" metrics={otherMetrics} {...cardProps} />
+          <ReceptionLog member={member} enabled={cloudLive} />
           <DemoControls
             key={member.id}
             member={member}

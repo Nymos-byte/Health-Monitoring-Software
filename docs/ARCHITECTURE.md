@@ -127,8 +127,21 @@ Implemented in `src/data/mockData.js` and `src/utils/metrics.js`:
 60), newest first, at most 500: `{"records": [...]}`. `503` if not configured, `502` if the read
 fails.
 
+`GET` filters on arrival time (`recibido`), so a black-box backlog recorded long ago still shows.
+
 `POST /api/telemetry` — body: one snapshot or an array of 1–500 snapshots. Each one is stored with
-`origen: "en_vivo"`, whatever the client sends.
+`origen: "en_vivo"`, whatever the client sends, plus how it arrived:
+
+| Field | Set by | Meaning |
+|---|---|---|
+| `enlace_al_grabar` | device | Link when recorded: `conectado`, `sin_red` (real network outage), `perdida_simulada_manual` (*Simulate link loss*), `perdida_simulada_programada` (scheduled LOS) |
+| `recibido` | server | Arrival time |
+| `retraso_s` | server | Seconds between recording and arrival |
+| `entrega` | server | `tiempo_real`, or `caja_negra` if recorded without a link or delayed more than 45 s |
+
+Ground → *Live* → *Azure reception* lists these per astronaut (control only, not on crew devices),
+so a test can show whether the offline mode worked and whether the outage was real or simulated.
+To test a real outage, put the crew device in airplane mode (or DevTools → Network → Offline).
 
 ```json
 {

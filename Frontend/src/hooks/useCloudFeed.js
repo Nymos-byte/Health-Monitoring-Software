@@ -16,15 +16,33 @@ function toSample(record) {
   };
 }
 
+// What ground control needs to check the link: when each record was taken and arrived, whether
+// it came live or from the black box, and the link state on the device when it was recorded
+function toReception(record) {
+  return {
+    id: record.id,
+    recordedAt: Date.parse(record.timestamp),
+    receivedAt: record.recibido ? Date.parse(record.recibido) : null,
+    delay: record.retraso_s ?? null,
+    delivery: record.entrega ?? null,
+    link: record.enlace_al_grabar ?? null,
+  };
+}
+
 // Replaces an astronaut's simulated ground copy with what their device stored in Azure,
-// as long as it reported recently for the task they are doing now
+// as long as it reported recently for the task they are doing now. The reception log is kept
+// either way.
 function mergeMember(member, records, now) {
-  const own = records
-    .filter((r) => r.astronauta_id === member.id && r.tarea === member.taskId)
+  const mine = records.filter((r) => r.astronauta_id === member.id);
+  const cloudLog = mine.map(toReception).sort((a, b) => b.recordedAt - a.recordedAt);
+  const own = mine
+    .filter((r) => r.tarea === member.taskId)
     .map(toSample)
     .sort((a, b) => a.timestamp - b.timestamp);
   const latest = own[own.length - 1];
-  if (!latest || now - latest.timestamp > STALE_MS) return member;
+  if (!latest || now - latest.timestamp > STALE_MS) {
+    return cloudLog.length ? { ...member, cloudLog } : member;
+  }
 
   const { time: _time, timestamp: _timestamp, ...readings } = latest;
   const earlier = member.data.vitals.filter((v) => v.timestamp < own[0].timestamp);
@@ -32,6 +50,7 @@ function mergeMember(member, records, now) {
     ...member,
     source: 'azure',
     cloudAt: latest.timestamp,
+    cloudLog,
     data: {
       ...member.data,
       currentVitals: { ...member.data.currentVitals, ...readings },

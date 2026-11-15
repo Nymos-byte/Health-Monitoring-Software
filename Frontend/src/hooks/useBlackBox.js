@@ -7,7 +7,8 @@ const RECORD_MS = 15000;
 // The astronaut's onboard black box. The device records the wearer's vitals on its own, keeps them
 // while there is no link to ground, and sends everything stored as soon as the link is back.
 // "Link" means both a working network connection and a downlink for the astronaut's environment.
-export function useBlackBox(member, downlinkUp) {
+// `forcedLoss` says whether a downlink outage was forced from the demo controls.
+export function useBlackBox(member, downlinkUp, forcedLoss) {
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
   const [stored, setStored] = useState(0);
   // Result of the last attempt to reach ground: 'synced', 'unconfigured' or 'unreachable'
@@ -17,9 +18,19 @@ export function useBlackBox(member, downlinkUp) {
 
   const memberRef = useRef(member);
   const connectedRef = useRef(connected);
+  // Why there is no link, stored with every record so ground can tell a real outage from a demo one
+  const link = !isOnline
+    ? 'sin_red'
+    : downlinkUp
+      ? 'conectado'
+      : forcedLoss
+        ? 'perdida_simulada_manual'
+        : 'perdida_simulada_programada';
+  const linkRef = useRef(link);
   useEffect(() => {
     memberRef.current = member;
     connectedRef.current = connected;
+    linkRef.current = link;
   });
 
   const refresh = useCallback(async () => {
@@ -56,7 +67,7 @@ export function useBlackBox(member, downlinkUp) {
   useEffect(() => {
     const record = async () => {
       try {
-        await recordSnapshot(makeSnapshot(memberRef.current));
+        await recordSnapshot(makeSnapshot(memberRef.current, linkRef.current));
       } catch {
         return;
       }

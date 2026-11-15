@@ -16,8 +16,9 @@ export class UploadError extends Error {
 }
 
 // One black-box record: every numeric reading at this moment plus where and what the astronaut
-// was doing. Top-level field names are kept from the original Azure Cosmos DB schema.
-export function makeSnapshot(member) {
+// was doing, and the link state when it was recorded. Top-level field names are kept from the
+// original Azure Cosmos DB schema.
+export function makeSnapshot(member, link = 'conectado') {
   const v = member.data.currentVitals;
   const constantes = Object.fromEntries(
     Object.keys(metricDefinitions)
@@ -37,6 +38,8 @@ export function makeSnapshot(member) {
     radiacion: v.cumulative_radiation_mgy,
     t_score_cadera: v.hip_t_score,
     constantes,
+    // 'conectado', 'sin_red' (real outage), 'perdida_simulada_manual' or 'perdida_simulada_programada'
+    enlace_al_grabar: link,
     timestamp: new Date().toISOString(),
   };
 }

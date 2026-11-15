@@ -48,7 +48,7 @@ function App() {
   const [themeChoice, setThemeChoice] = useState(readThemeChoice);
   // The selected astronaut's device: records on its own, keeps data onboard without a link
   const wearer = crewData[selectedAstronaut];
-  const blackBox = useBlackBox(wearer, links[wearer.env].status === 'aos');
+  const blackBox = useBlackBox(wearer, links[wearer.env].status === 'aos', forcedLoss.has(wearer.env));
   // Acknowledged critical readings, kept separately for ground and crew:
   // "<audience>|<astronaut>:<phase>:<metric>". The wrist and tablet belong to the same astronaut,
   // so acknowledging on one silences both.

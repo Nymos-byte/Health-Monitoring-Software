@@ -13,6 +13,8 @@ const LIVE = 'en_vivo';
 const DEFAULT_MINUTES = 10;
 const MAX_MINUTES = 60;
 const MAX_RECORDS = 500;
+// A record that reaches the server later than this was held in the black box, not sent live
+const LIVE_DELAY_S = 45;
 
 let container = null;
 
@@ -27,7 +29,19 @@ function getContainer() {
   return container;
 }
 
-// Newest live records first, across every astronaut
+// How a record reached ground: straight away, or delivered later from the onboard black box
+function delivery(item, receivedAt) {
+  const delay = Math.max(0, Math.round((receivedAt - Date.parse(item.timestamp)) / 1000));
+  const recordedOffline = item.enlace_al_grabar && item.enlace_al_grabar !== 'conectado';
+  return {
+    recibido: new Date(receivedAt).toISOString(),
+    retraso_s: Number.isFinite(delay) ? delay : null,
+    entrega: recordedOffline || delay > LIVE_DELAY_S ? 'caja_negra' : 'tiempo_real',
+  };
+}
+
+// Live records received recently, newest first, across every astronaut. Filtering on arrival
+// time keeps a black-box backlog visible even when it was recorded long ago.
 async function readRecent(req, res) {
   const target = getContainer();
   if (!target) {
@@ -39,7 +53,7 @@ async function readRecent(req, res) {
     const { resources } = await target.items
       .query({
         query:
-          'SELECT TOP @limit * FROM c WHERE c.origen = @origen AND c.timestamp >= @since ORDER BY c.timestamp DESC',
+          'SELECT TOP @limit * FROM c WHERE c.origen = @origen AND c.recibido >= @since ORDER BY c.timestamp DESC',
         parameters: [
           { name: '@limit', value: MAX_RECORDS },
           { name: '@origen', value: LIVE },
@@ -77,7 +91,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    for (const item of items) await target.items.create({ ...item, origen: LIVE });
+    const receivedAt = Date.now();
+    for (const item of items) {
+      await target.items.create({ ...item, ...delivery(item, receivedAt), origen: LIVE });
+    }
     return res.status(201).json({ stored: items.length });
   } catch (error) {
     console.error('Cosmos DB write failed:', error.message);
